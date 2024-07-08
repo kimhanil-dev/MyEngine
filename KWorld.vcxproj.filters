@@ -1,0 +1,104 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="Game">
+      <UniqueIdentifier>{3f7b89f9-22e5-4ebf-8421-a7c59f423721}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Game\FrameWork">
+      <UniqueIdentifier>{41d9d9bc-cbf5-4841-a0f1-20fc633ff5cd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Game\FrameWork\Object">
+      <UniqueIdentifier>{e1de1734-b7a7-45fc-bd33-1ae7b7d7f50d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Game\FrameWork\Rendering">
+      <UniqueIdentifier>{a09c2312-6d89-4e48-a907-0ab6b169766a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Game\FrameWork\Utill">
+      <UniqueIdentifier>{326a109e-48b5-4ff4-a860-b2231f65f209}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Game\Windows">
+      <UniqueIdentifier>{d0ad50d1-1ed6-4a8c-9170-9b7396c31e68}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Game\Windows\headers">
+      <UniqueIdentifier>{5092dd66-d0fe-41df-a191-baf69c16f283}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Game\FrameWork\Utill\fbx">
+      <UniqueIdentifier>{34b24686-c0db-46ca-82f6-be02f54c554f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Game\FrameWork\Utill\console">
+      <UniqueIdentifier>{944fdbac-2f2d-4e53-9772-3d9b76d1efee}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Source\Core\Math\Vector.h">
+      <Filter>Game\FrameWork\Utill</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Core\Render\Vertex.h">
+      <Filter>Game\FrameWork\Utill</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Core\Types.h">
+      <Filter>Game\FrameWork\Utill</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Core\Framwork\game.h">
+      <Filter>Game\FrameWork</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Core\Render\Render.h">
+      <Filter>Game\FrameWork\Rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Core\Object\Object.h">
+      <Filter>Game\FrameWork\Object</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Window\framework.h">
+      <Filter>Game\Windows\headers</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Window\Resource.h">
+      <Filter>Game\Windows\headers</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Window\targetver.h">
+      <Filter>Game\Windows\headers</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Utill\fbx.h">
+      <Filter>Game\FrameWork\Utill\fbx</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Utill\console.h">
+      <Filter>Game\FrameWork\Utill\console</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Source\Core\Math\Vector.cpp">
+      <Filter>Game\FrameWork\Utill</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Core\Framwork\game.cpp">
+      <Filter>Game\FrameWork</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Core\Object\Object.cpp">
+      <Filter>Game\FrameWork\Object</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Core\Render\Render.cpp">
+      <Filter>Game\FrameWork\Rendering</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Window\KWorld.cpp">
+      <Filter>Game\Windows</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Utill\fbx.cpp">
+      <Filter>Game\FrameWork\Utill\fbx</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="Resource\KWorld.rc">
+      <Filter>Resource Files</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="Resource\small.ico">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="Resource\KWorld.ico">
+      <Filter>Resource Files</Filter>
+    </Image>
+  </ItemGroup>
+</Project>
