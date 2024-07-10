@@ -45,7 +45,7 @@ void Init(HWND hWnd, const uint width, const uint height)
 	fbx::LoadFBX("D:/CGPractice/KWorld/Resource/fbx/Box.fbx", 0);
 	fbx::LoadFBX("D:/CGPractice/KWorld/Resource/fbx/dragon.fbx", 1);
 
-	gObjects.push_back(new Object(0, FVector(0.0f, 0.0f, 300.0f),0.0f,fbx::GetMesh(0)));
+	gObjects.push_back(new Object(0, FVector(0.0f, 0.0f, 300.0f),0.0f,fbx::GetMesh(1)));
 
 	// triangle
 	gObjects.push_back(new Object(1, FVector(500.0f, 540.0f, 0.0f), 0.0f,
@@ -63,8 +63,6 @@ void Init(HWND hWnd, const uint width, const uint height)
 		{FVector(-50.0f,-50.0f,0.0f), FVector(0.0f)},
 		{FVector(0.0f,50.0f,0.0f), FVector(0.0f)},
 		}));
-
-
 
 	// camera
 

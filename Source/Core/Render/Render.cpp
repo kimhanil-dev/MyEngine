@@ -39,6 +39,13 @@ void DrawLines(uint* pixelBuffer, uint width, uint height, const std::vector<Ver
 
 // юс╫ц
 void Draw_Indexed(uint* pixelBuffer, uint width, uint height, const Object* camera, const Object* object);
+bool IsBackfacePolygon(std::vector<FVector> polygon)
+{
+	FVector cameraForward = FVector(0.0f,0.0f,1.0f);
+	FVector normal = ((polygon[1] - polygon[0]).Cross(polygon[2] - polygon[1])).Normalize();
+
+	return (cameraForward.Dot(normal) > 0);
+}
 
 #pragma endregion Forward Definition
 
@@ -603,6 +610,9 @@ void FillTriangles(uint* pixelBuffer, uint width, uint height, const std::vector
 {
 	for (int i = 0; i < indexCount; i+=3)
 	{
+		if(IsBackfacePolygon({ vertices[indices[i]].Position, vertices[indices[i + 1]].Position,vertices[indices[i + 2]].Position}))
+			continue;
+
 		FillTriangleScanLine(pixelBuffer, width, height,{vertices[indices[i]],vertices[indices[i+1]],vertices[indices[i+2]]});
 	}
 }
@@ -621,6 +631,9 @@ void DrawLines(uint* pixelBuffer, uint width, uint height, const std::vector<Ver
 {
 	for (int i = 0; i < indexCount; i += 3)
 	{
+		if (IsBackfacePolygon({ vertices[indices[i]].Position, vertices[indices[i + 1]].Position,vertices[indices[i + 2]].Position }))
+			continue;
+
 		DrawLine(pixelBuffer, width, height, vertices[indices[i]].Position, vertices[indices[i + 1]].Position);
 		DrawLine(pixelBuffer, width, height, vertices[indices[i + 1]].Position, vertices[indices[i + 2]].Position);
 		DrawLine(pixelBuffer, width, height, vertices[indices[i + 2]].Position, vertices[indices[i]].Position);
