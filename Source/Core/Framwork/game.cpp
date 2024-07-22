@@ -1,14 +1,17 @@
 #include "game.h"
 
-#include "Core/Render/Render.h"
 #include "Core/Object/Object.h"
 #include "Utill/console.h"
 #include "Utill/fbx.h"
+#include "Core/Render/Graphics/Graphics.h"
+#include "Core/Render/Graphics/GraphicsSW.h"
+
 
 #include <iostream>
 #include <functional>
 #include <vector>
 #include <map>
+#include <algorithm>
 
 // window
 	// handle
@@ -24,23 +27,46 @@ static std::vector<Object*> gObjects;
 static Object camera;
 
 // frame
-static constexpr float FPS_60_DELTA_TIME = 1.0f / 60.0f;
-static constexpr float FPS_144_DELTA_TIME = 1.0f / 144.0f;
+static float constexpr FPS_60_DELTA_TIME = 1.0f / 60.0f;
+static float constexpr FPS_144_DELTA_TIME = 1.0f / 144.0f;
+
+//render
+IGraphics* gRenderer[] = {
+	GetRenderer(Renderer::DriectX),
+	GetRenderer(Renderer::Software),
+};
+
 
 // input
 	// event
 typedef std::function<void(UINT_PTR)> InputEvent;
 std::map<UINT_PTR, InputEvent> gInputEventListeners;
 
+// 0 : SW
+// 1 : D2D
+Renderer gRenderType = Renderer::Software;
+
 void Init(HWND hWnd, const uint width, const uint height)
 {
 	ghWnd = hWnd;
 
-	Render::Init(hWnd,width,height);
+	// Init Renderer
+	HRESULT hr = S_OK;
+	
+	// Init renderers
+	for (auto& renderer : gRenderer)
+	{
+		if (FAILED(hr = renderer->Init(ghWnd)))
+		{
+			PrintError("Renderer init failed : %08x\n", hr);
+			assert(false);
+		}
+	}
 
 	// add input event listener
 	gInputEventListeners[VK_F1] = [](UINT_PTR key) {gbIsGameRunning = false, SendMessage(ghWnd, WM_CLOSE, NULL, NULL); };	// redraw screen
 	gInputEventListeners[VK_F2] = [](UINT_PTR key) {gbIsPause = gbIsPause == false ? true : false; };	// redraw screen
+	gInputEventListeners[VK_F3] = [](UINT_PTR key) {gRenderType = gRenderType == Renderer::DriectX ? Renderer::Software : Renderer::DriectX; };		// change render type
 
 	fbx::LoadFBX("D:/CGPractice/KWorld/Resource/fbx/Box.fbx", 0);
 	fbx::LoadFBX("D:/CGPractice/KWorld/Resource/fbx/dragon.fbx", 1);
@@ -64,7 +90,19 @@ void Init(HWND hWnd, const uint width, const uint height)
 		{FVector(0.0f,50.0f,0.0f), FVector(0.0f)},
 		}));
 
+	for (auto object : gObjects)
+	{
+		for (auto& renderer : gRenderer)
+		{
+			renderer->AddObject(object);
+		}
+	}
+	
 	// camera
+	for (auto& renderer : gRenderer)
+	{
+		renderer->SetCamera(&camera);
+	}
 
 	PrintGood("Init complite");
 }
@@ -83,7 +121,8 @@ bool Update()
 	if (refreshTime >= FPS_144_DELTA_TIME)
 	{
 		refreshTime -= FPS_144_DELTA_TIME;
-		Render::Render(&camera, gObjects);
+
+		gRenderer[static_cast<unsigned int>(gRenderType)]->Render();
 	}
 
 	if (!gbIsPause)
@@ -120,5 +159,6 @@ void Release()
 
 	gObjects.clear();
 
-	Render::Release();
+	for (auto& renderer : gRenderer)
+		renderer->Release();
 }

@@ -1,8 +1,12 @@
-#include "Render.h"
+#include "GraphicsSW.h"
 
 #include <cassert>
 
 #include "Core/Object/Object.h"
+
+static constexpr float PI = 3.14159265359f;
+#define Radian(Degree) Degree * (PI / 180.0f)
+
 
 #pragma region Forward Declaration
 
@@ -11,17 +15,17 @@
 void DrawLines(HDC, std::vector<FVector>);
 void DrawLine(HDC, int, int, int, int);
 
-	// using DDA
+// using DDA
 void DrawLines(uint* pixelBuffer, uint width, uint height, const std::vector<Vertex>& vertices, const FVector& rotate, const FVector& transform);
 
-	// draw vertex none transformation
+// draw vertex none transformation
 void DrawLines(uint* pixelBuffer, uint width, uint height, const std::vector<FVector>& vectors);
 void DrawLine(uint* pixelBuffer, uint width, uint height, const FVector& start, const FVector& end);
 
 // fill triangles
 	// using Slope
 void FillTriangle(uint* pixelBuffer, const uint width, const uint height, const std::vector<Vertex>& triangle);
-	// using scan line, interpolation
+// using scan line, interpolation
 void FillTriangleScanLine(uint* pixelBuffer, const uint width, const uint height, std::vector<Vertex> vertices, const FVector& location, const FVector& rotation);
 
 // transformation
@@ -38,169 +42,17 @@ void DrawLines(uint* pixelBuffer, uint width, uint height, const std::vector<Ver
 ////
 
 // юс╫ц
-void Draw_Indexed(uint* pixelBuffer, uint width, uint height, const Object* camera, const Object* object);
+void Draw_Indexed(uint* pixelBuffer, uint width, uint height, const Object* mCamera, const Object* object);
 bool IsBackfacePolygon(std::vector<FVector> polygon)
 {
-	FVector cameraForward = FVector(0.0f,0.0f,1.0f);
+	FVector mCameraForward = FVector(0.0f, 0.0f, 1.0f);
 	FVector normal = ((polygon[1] - polygon[0]).Cross(polygon[2] - polygon[1])).Normalize();
 
-	return (cameraForward.Dot(normal) > 0);
+	return (mCameraForward.Dot(normal) > 0);
 }
 
 #pragma endregion Forward Definition
 
-#pragma region Interface
-static bool gIsInited = false;
-
-// windows
-static HWND		ghWnd			= NULL;
-static HDC		ghdc			= NULL;
-static HDC		ghMemDC			= NULL;
-static HBITMAP	ghRenderTarget	= NULL;
-
-// render states
-static uint gWidth = 0;
-static uint gHeight = 0;
-static uint *gPixelBuffer = nullptr;
-
-void Render::Init(HWND hWnd, const uint width, const uint height)
-{
-	if (!gIsInited)
-	{
-		if (hWnd == NULL)
-		{
-			assert(false);
-		}
-
-		hWnd = hWnd;
-	}
-	else
-	{
-		Release();
-	}
-
-	gWidth = width;
-	gHeight = height;
-
-	// window's draw tools
-	ghdc = GetDC(hWnd);
-	ghMemDC = CreateCompatibleDC(ghdc);
-	ghRenderTarget = CreateCompatibleBitmap(ghdc, gWidth, gHeight);
-
-	// render buffer
-	gPixelBuffer = new uint[width * height];
-	ZeroMemory(gPixelBuffer, sizeof(uint) * width * height);
-
-	gIsInited = true;
-}
-
-void Render::Render(const Object* camera, const std::vector<Object*> objects)
-{
-	if (!gIsInited)
-	{
-		assert(false);
-	}
-
-	// clear pixel buffer
-	ZeroMemory(gPixelBuffer,sizeof(uint) * gWidth * gHeight);
-
-	HBITMAP oldBitmap = (HBITMAP)SelectObject(ghMemDC, ghRenderTarget);
-	{
-		for (int i = 0; i < objects.size(); ++i)
-		{
-			if (objects[i]->mID == 1)
-			{
-				FillTriangleScanLine(gPixelBuffer, gWidth, gHeight, objects[i]->mVertices, objects[i]->mOrigin, objects[i]->mRotate);
-				DrawLines(gPixelBuffer, gWidth, gHeight, objects[i]->mVertices, objects[i]->mRotate, objects[i]->mOrigin);
-			}
-			else if (objects[i]->mID == 3)
-			{
-				Draw_Indexed(gPixelBuffer,gWidth,gHeight,camera,objects[i]);
-			}
-			else
-			{
-				// frustom test
-				{
-					float x = 0.0f, y = 0.0f;
-					float z = 0.0f, nearZ = 1.0f;
-					float planeX = 0.0f, planeY = 0.0f;
-					float screenX = 0.0f, screenY = 0.0f;
-					planeX = z / x * nearZ;
-					planeY = z / y * nearZ;
-
-					// rotate local
-
-					// transform cube to camera local coord
-					FVector rotate = objects[i]->mRotate - camera->mRotate;
-					FVector origin = objects[i]->mOrigin - camera->mOrigin;
-					std::vector<Vertex> v = std::vector<Vertex>(objects[i]->mMesh->VertexCount);
-					for (int j = 0; j < objects[i]->mMesh->VertexCount; ++j)
-					{
-						v[j] = objects[i]->mMesh->Vertices[j];
-					}
-
-					// local transform
-					TransformMesh(v, objects[i]->mRotate, 0.0f);
-
-					// world transform
-					TransformMesh(v, 0.0f, origin);
-
-					// а╬х╬╨Я
-					float screenRatio = (float)gHeight / gWidth;
-
-					static float maxX = 0.0f, maxY = 0.0f;
-					FVector planePos;
-					for (auto& vertex : v)
-					{
-						x = vertex.Position.X;
-						y = vertex.Position.Y;
-						z = vertex.Position.Z;
-
-						// screen space
-						x = x / z * screenRatio;
-						y = y / z;
-
-						// NDC (normalized device coordinates)
-						x = (1 + x) * 0.5f;
-						y = (1 + y) * 0.5f;
-
-						// raster space
-						x *= gWidth;
-						y *= gHeight;
-
-						vertex.Position = FVector(x, y, 0.0f);
-					}
-
-
-					FillTriangles(gPixelBuffer,gWidth,gHeight,v,objects[i]->mMesh->Indices,objects[i]->mMesh->IndexCount);
-					DrawLines(gPixelBuffer, gWidth, gHeight, v, objects[i]->mMesh->Indices, objects[i]->mMesh->IndexCount);
-				}
-				// frustom test end
-			}
-		}
-
-		SetBitmapBits(ghRenderTarget, gWidth* gHeight* 4, gPixelBuffer);
-
-		BitBlt(ghdc, 0, 0, gWidth, gHeight, ghMemDC, 0, 0, SRCCOPY);
-	}
-	SelectObject(ghMemDC, oldBitmap);
-}
-
-void Render::Release()
-{
-	if (gIsInited)
-	{
-		delete[] gPixelBuffer;
-		gPixelBuffer = nullptr;
-
-		DeleteObject(ghRenderTarget);
-		ghRenderTarget = NULL;
-
-		ReleaseDC(ghWnd, ghMemDC);
-		ghMemDC = NULL;
-	}
-}
-#pragma endregion Interface
 
 #pragma region Rendring Algorithms
 
@@ -608,18 +460,18 @@ void Translate(FVector& v, const FVector& deltaLocaiton)
 
 void FillTriangles(uint* pixelBuffer, uint width, uint height, const std::vector<Vertex>& vertices, const int* indices, const uint indexCount)
 {
-	for (int i = 0; i < indexCount; i+=3)
+	for (UINT i = 0; i < indexCount; i += 3)
 	{
-		if(IsBackfacePolygon({ vertices[indices[i]].Position, vertices[indices[i + 1]].Position,vertices[indices[i + 2]].Position}))
+		if (IsBackfacePolygon({ vertices[indices[i]].Position, vertices[indices[i + 1]].Position,vertices[indices[i + 2]].Position }))
 			continue;
 
-		FillTriangleScanLine(pixelBuffer, width, height,{vertices[indices[i]],vertices[indices[i+1]],vertices[indices[i+2]]});
+		FillTriangleScanLine(pixelBuffer, width, height, { vertices[indices[i]],vertices[indices[i + 1]],vertices[indices[i + 2]] });
 	}
 }
 
 void DrawLines(uint* pixelBuffer, uint width, uint height, const std::vector<FVector>& vertices, const int* indices, const uint indexCount)
 {
-	for (int i = 0; i < indexCount; i += 3)
+	for (UINT i = 0; i < indexCount; i += 3)
 	{
 		DrawLine(pixelBuffer, width, height, vertices[indices[i]], vertices[indices[i + 1]]);
 		DrawLine(pixelBuffer, width, height, vertices[indices[i + 1]], vertices[indices[i + 2]]);
@@ -629,7 +481,7 @@ void DrawLines(uint* pixelBuffer, uint width, uint height, const std::vector<FVe
 
 void DrawLines(uint* pixelBuffer, uint width, uint height, const std::vector<Vertex>& vertices, const int* indices, const uint indexCount)
 {
-	for (int i = 0; i < indexCount; i += 3)
+	for (UINT i = 0; i < indexCount; i += 3)
 	{
 		if (IsBackfacePolygon({ vertices[indices[i]].Position, vertices[indices[i + 1]].Position,vertices[indices[i + 2]].Position }))
 			continue;
@@ -640,7 +492,7 @@ void DrawLines(uint* pixelBuffer, uint width, uint height, const std::vector<Ver
 	}
 }
 
-void Draw_Indexed(uint* pixelBuffer, uint width, uint height, const Object* camera, const Object* object)
+void Draw_Indexed(uint* pixelBuffer, uint width, uint height, const Object* mCamera, const Object* object)
 {
 	float x = 0.0f, y = 0.0f;
 	float z = 0.0f, nearZ = 1.0f;
@@ -651,9 +503,9 @@ void Draw_Indexed(uint* pixelBuffer, uint width, uint height, const Object* came
 
 	// rotate local
 
-	// transform cube to camera local coord
-	FVector rotate = object->mRotate - camera->mRotate;
-	FVector origin = object->mOrigin - camera->mOrigin;
+	// transform cube to mCamera local coord
+	FVector rotate = object->mRotate - mCamera->mRotate;
+	FVector origin = object->mOrigin - mCamera->mOrigin;
 	std::vector<FVector> v = std::vector<FVector>(object->mMesh->VertexCount);
 
 	for (int j = 0; j < v.size(); ++j)
@@ -668,7 +520,7 @@ void Draw_Indexed(uint* pixelBuffer, uint width, uint height, const Object* came
 	TransformMesh(v, 0.0f, origin);
 
 	// а╬х╬╨Я
-	float screenRatio = (float)gHeight / gWidth;
+	float screenRatio = (float)width / height;
 
 	static float maxX = 0.0f, maxY = 0.0f;
 	FVector planePos;
@@ -687,14 +539,176 @@ void Draw_Indexed(uint* pixelBuffer, uint width, uint height, const Object* came
 		y = (1 + y) * 0.5f;
 
 		// raster space
-		x *= gWidth;
-		y *= gHeight;
+		x *= width;
+		y *= height;
 
 		vertex = FVector(x, y, 0.0f);
 	}
 
-	DrawLines(pixelBuffer,width,height,v,object->mMesh->Indices,object->mMesh->IndexCount);
+	DrawLines(pixelBuffer, width, height, v, object->mMesh->Indices, object->mMesh->IndexCount);
 }
 
 
 #pragma endregion Transformation
+
+
+HRESULT GraphicsSW::Init(const HWND& hWnd)
+{
+	assert(hWnd != NULL);
+
+	mWnd = hWnd;
+
+	RECT rc;
+	GetWindowRect(mWnd, &rc);
+	mWindowWidth = rc.right - rc.left;
+	mWindowHeight = rc.bottom - rc.top;
+
+	// window's draw tools
+	mDC = GetDC(mWnd);
+	mMemDC = CreateCompatibleDC(mDC);
+	mRenderTarget = CreateCompatibleBitmap(mDC, mWindowWidth, mWindowHeight);
+
+	// render buffer
+	mPixelBuffer = new uint[mWindowWidth * mWindowHeight];
+	ZeroMemory(mPixelBuffer, sizeof(uint) * mWindowWidth * mWindowHeight);
+
+
+	FVector rightVector = { 1.0f,0.0f,0.0f };
+	FVector upVector = { 0.0f,1.0f,0.0f };
+
+	//init frustom planes
+	mFrustomPlanes[0] = { FVector(0.0f,sin(Radian(45.0f)),cos(Radian(45.0f))).Cross(rightVector)}; // top
+	mFrustomPlanes[1] = { rightVector.Cross({0.0f,sin(Radian(-45.0f)),cos(Radian(-45.0f))}) }; // bottom
+	mFrustomPlanes[2] = { upVector.Cross(FVector(sin(Radian(45.0f)),0.0f,cos(Radian(45.0f))))}; // right
+	mFrustomPlanes[3] = { FVector(sin(Radian(-45.0f)),0.0f,cos(Radian(-45.0f))).Cross(upVector) }; // left
+
+	return S_OK;
+}
+
+void GraphicsSW::Render()
+{
+	// clear pixel buffer
+	ZeroMemory(mPixelBuffer, sizeof(uint) * mWindowWidth * mWindowHeight);
+
+	HBITMAP oldBitmap = (HBITMAP)SelectObject(mMemDC, mRenderTarget);
+	{
+		for (int i = 0; i < mObjects.size(); ++i)
+		{
+			if (mObjects[i]->mID == 1)
+			{
+				FillTriangleScanLine(mPixelBuffer, mWindowWidth, mWindowHeight, mObjects[i]->mVertices, mObjects[i]->mOrigin, mObjects[i]->mRotate);
+				DrawLines(mPixelBuffer, mWindowWidth, mWindowHeight, mObjects[i]->mVertices, mObjects[i]->mRotate, mObjects[i]->mOrigin);
+			}
+			else if (mObjects[i]->mID == 3)
+			{
+				Draw_Indexed(mPixelBuffer, mWindowWidth, mWindowHeight, mCamera, mObjects[i]);
+			}
+			else
+			{
+				// frustom test
+				{
+					float x = 0.0f, y = 0.0f;
+					float z = 0.0f, nearZ = 1.0f;
+					float planeX = 0.0f, planeY = 0.0f;
+					float screenX = 0.0f, screenY = 0.0f;
+					planeX = z / x * nearZ;
+					planeY = z / y * nearZ;
+
+					// rotate local
+
+					// transform cube to mCamera local coord
+					FVector rotate = mObjects[i]->mRotate - mCamera->mRotate;
+					FVector origin = mObjects[i]->mOrigin - mCamera->mOrigin;
+					std::vector<Vertex> v = std::vector<Vertex>(mObjects[i]->mMesh->VertexCount);
+					for (UINT j = 0; j < mObjects[i]->mMesh->VertexCount; ++j)
+					{
+						v[j] = mObjects[i]->mMesh->Vertices[j];
+					}
+
+					// local transform
+					TransformMesh(v, mObjects[i]->mRotate, 0.0f);
+
+					// world transform
+					TransformMesh(v, 0.0f, origin);
+
+					// check frustom
+					bool bIsOutFrustom = false;
+					for (const auto& _v : v)
+					{
+						for (UINT j = 0; j < 4; ++j)
+						{
+							if (CalculatePointPlaneRelation(mFrustomPlanes[i], _v.Position) != PlaneRelation::PP_Back)
+							{
+								bIsOutFrustom = true;
+								break;
+							}
+						}
+
+						if(bIsOutFrustom)
+							break;
+					}
+					if(bIsOutFrustom)
+						continue;
+
+					// а╬х╬╨Я
+					float screenRatio = (float)mWindowHeight / mWindowWidth;
+
+					static float maxX = 0.0f, maxY = 0.0f;
+					FVector planePos;
+					for (auto& vertex : v)
+					{
+						x = vertex.Position.X;
+						y = vertex.Position.Y;
+						z = vertex.Position.Z;
+
+						// screen space
+						x = x / z * screenRatio;
+						y = y / z;
+
+						// NDC (normalized device coordinates)
+						x = (1 + x) * 0.5f;
+						y = (1 + y) * 0.5f;
+
+						// raster space
+						x *= mWindowWidth;
+						y *= mWindowHeight;
+
+						vertex.Position = FVector(x, y, 0.0f);
+					}
+
+
+					FillTriangles(mPixelBuffer, mWindowWidth, mWindowHeight, v, mObjects[i]->mMesh->Indices, mObjects[i]->mMesh->IndexCount);
+					DrawLines(mPixelBuffer, mWindowWidth, mWindowHeight, v, mObjects[i]->mMesh->Indices, mObjects[i]->mMesh->IndexCount);
+				}
+				// frustom test end
+			}
+		}
+
+		SetBitmapBits(mRenderTarget, mWindowWidth * mWindowHeight * 4, mPixelBuffer);
+
+		BitBlt(mDC, 0, 0, mWindowWidth, mWindowHeight, mMemDC, 0, 0, SRCCOPY);
+	}
+	SelectObject(mMemDC, oldBitmap);
+}
+
+void GraphicsSW::Release()
+{
+	delete[] mPixelBuffer;
+	mPixelBuffer = nullptr;
+
+	DeleteObject(mRenderTarget);
+	mRenderTarget = NULL;
+
+	ReleaseDC(mWnd, mMemDC);
+	mMemDC = NULL;
+}
+
+void GraphicsSW::AddObject(Object* object)
+{
+	mObjects.push_back(object);
+}
+
+void GraphicsSW::SetCamera(Object* object)
+{
+	mCamera = object;
+}

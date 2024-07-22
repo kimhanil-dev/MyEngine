@@ -118,7 +118,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>C:\Program Files\Autodesk\FBX\FBX SDK\2020.3.7\lib\x64\debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <IgnoreSpecificDefaultLibraries>LIBMCT;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
-      <AdditionalDependencies>wininet.lib;libfbxsdk.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>wininet.lib;libfbxsdk.lib;d3d11.lib;dxgi.lib;dxguid.lib;d3dcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -138,11 +138,14 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="Source\Core\Render\Graphics\GraphicsSW.h" />
+    <ClInclude Include="Source\Core\Render\Graphics\IGraphics.h" />
+    <ClInclude Include="Source\Core\Render\Graphics\Graphics.h" />
+    <ClInclude Include="Source\Core\Math\Plane.h" />
     <ClInclude Include="Source\Utill\console.h" />
     <ClInclude Include="Source\Utill\fbx.h" />
     <ClInclude Include="Source\Core\Framwork\game.h" />
     <ClInclude Include="Source\Core\Object\Object.h" />
-    <ClInclude Include="Source\Core\Render\Render.h" />
     <ClInclude Include="Source\Core\Types.h" />
     <ClInclude Include="Source\Window\framework.h" />
     <ClInclude Include="Source\Window\Resource.h" />
@@ -151,11 +154,14 @@
     <ClInclude Include="Source\Core\Render\Vertex.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Source\Core\Math\Plane.cpp" />
+    <ClCompile Include="Source\Core\Render\Graphics\GraphicsSW.cpp" />
+    <ClCompile Include="Source\Core\Render\Graphics\Graphics.cpp" />
+    <ClCompile Include="Source\Core\Render\Graphics\IGraphics.cpp" />
     <ClCompile Include="Source\Utill\fbx.cpp" />
     <ClCompile Include="Source\Core\Framwork\game.cpp" />
     <ClCompile Include="Source\Window\KWorld.cpp" />
     <ClCompile Include="Source\Core\Object\Object.cpp" />
-    <ClCompile Include="Source\Core\Render\Render.cpp" />
     <ClCompile Include="Source\Core\Math\Vector.cpp" />
   </ItemGroup>
   <ItemGroup>

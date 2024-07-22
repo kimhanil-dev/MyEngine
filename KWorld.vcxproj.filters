@@ -46,9 +46,6 @@
     <ClInclude Include="Source\Core\Framwork\game.h">
       <Filter>Game\FrameWork</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Core\Render\Render.h">
-      <Filter>Game\FrameWork\Rendering</Filter>
-    </ClInclude>
     <ClInclude Include="Source\Core\Object\Object.h">
       <Filter>Game\FrameWork\Object</Filter>
     </ClInclude>
@@ -67,6 +64,10 @@
     <ClInclude Include="Source\Utill\console.h">
       <Filter>Game\FrameWork\Utill\console</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Core\Render\Graphics\Graphics.h" />
+    <ClInclude Include="Source\Core\Render\Graphics\IGraphics.h" />
+    <ClInclude Include="Source\Core\Render\Graphics\GraphicsSW.h" />
+    <ClInclude Include="Source\Core\Math\Plane.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Core\Math\Vector.cpp">
@@ -78,15 +79,16 @@
     <ClCompile Include="Source\Core\Object\Object.cpp">
       <Filter>Game\FrameWork\Object</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Core\Render\Render.cpp">
-      <Filter>Game\FrameWork\Rendering</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Window\KWorld.cpp">
       <Filter>Game\Windows</Filter>
     </ClCompile>
     <ClCompile Include="Source\Utill\fbx.cpp">
       <Filter>Game\FrameWork\Utill\fbx</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Core\Render\Graphics\Graphics.cpp" />
+    <ClCompile Include="Source\Core\Render\Graphics\GraphicsSW.cpp" />
+    <ClCompile Include="Source\Core\Render\Graphics\IGraphics.cpp" />
+    <ClCompile Include="Source\Core\Math\Plane.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Resource\KWorld.rc">
