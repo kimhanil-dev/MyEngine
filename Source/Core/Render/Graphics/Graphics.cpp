@@ -5,6 +5,7 @@
 #include <d3dcompiler.h>
 
 #include "Utill/console.h"
+#include "UI/DebugUI.h"
 
 struct SimpleVertex
 {
@@ -261,19 +262,22 @@ HRESULT Graphics::Init(const HWND& hWnd)
 	mView = XMMatrixLookAtLH({0.0f,1.0f,-5.0f,0.0f}, {0.0f,1.0f,0.0f, 0.0f}, {0.0f,1.0f,0.0f, 0.0f});
 	mProjection = XMMatrixPerspectiveFovLH(XM_PIDIV2, width/(FLOAT)height, 0.1f, 100.0f);
 
+	DebugUI::Init(hWnd, mD3DDevice, mD3DDeviceContext);
+
 	return S_OK;
 }
 
 void Graphics::Render()
 {
-	//*** update time
-	static float deltaTime = 0.0f;
-	static ULONGLONG prevTime = GetTickCount64();
-	ULONGLONG currentTime = GetTickCount64();
-	deltaTime = (currentTime - prevTime) * 0.001f;
+	static ULONGLONG prevTime = 0;
+	static ULONGLONG currentTime = 0;
+	currentTime = GetTickCount64();
+	float deltaTime = (currentTime - prevTime) * 0.001f;
+	prevTime = currentTime;
+
 
 	//*** Rotate cube
-	mWorld = XMMatrixRotationY(deltaTime);
+	mWorld = XMMatrixRotationY(100 * deltaTime);
 
 	//*** Clear back buffer
 	float clearColor[4] = { 0.0f, 0.125f, 0.6f, 1.0f }; //RGBA
@@ -292,11 +296,16 @@ void Graphics::Render()
 	mD3DDeviceContext->PSSetShader(mPixelShader, NULL, 0);
 	mD3DDeviceContext->DrawIndexed(36,0,0);
 
+	DebugUI::SetData("FPS", deltaTime);
+	DebugUI::Render();
+
 	mSwapChain->Present(0, 0);
 }
 
 void Graphics::Release()
 {
+	DebugUI::Release();
+
 	SafeRelease(&mPixelShader);
 	SafeRelease(&mVertexShader);
 

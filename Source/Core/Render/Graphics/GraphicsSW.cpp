@@ -41,7 +41,7 @@ void FillTriangles(uint* pixelBuffer, uint width, uint height, const std::vector
 void DrawLines(uint* pixelBuffer, uint width, uint height, const std::vector<Vertex>& vertices, const int* indices, const uint indexCount);
 ////
 
-// ÀÓ½Ã
+// ï¿½Ó½ï¿½
 void Draw_Indexed(uint* pixelBuffer, uint width, uint height, const Object* mCamera, const Object* object);
 bool IsBackfacePolygon(std::vector<FVector> polygon)
 {
@@ -64,7 +64,7 @@ float CalculateSlope(const FVector& startV, const FVector& endV)
 	float x = (endV.X - startV.X);
 	float y = (endV.Y - startV.Y);
 
-	// y°ªÀ» ÅëÇØ x°ªÀ» ¾ò¾î¾ß ÇÏ±â ¶§¹®¿¡, y / xÀÇ ½ÄÀ» x / y·Î º¯ÇüÇÕ´Ï´Ù.
+	// yï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ xï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Ï±ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½, y / xï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ x / yï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Õ´Ï´ï¿½.
 	return x / y;
 }
 
@@ -144,7 +144,7 @@ void FillTriangle(uint* pixelBuffer, const uint width, const uint height, const 
 	}
 }
 
-// y°ªÀÇ from, to·Î ÀÌ·ç¾îÁø Á÷¼±¿¡¼­ÀÇ À§Ä¡ °ª (0 ~ 1)
+// yï¿½ï¿½ï¿½ï¿½ from, toï¿½ï¿½ ï¿½Ì·ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½Ä¡ ï¿½ï¿½ (0 ~ 1)
 float EdgeLinearRatio(const FVector& from, const FVector& to, const float y)
 {
 	return (y - from.Y) / (to.Y - from.Y);
@@ -426,24 +426,24 @@ void TransformMesh(std::vector<Vertex>& v, const FVector& rotate, const FVector&
 void Rotate(FVector& v, const FVector& rotate)
 {
 
-	// È¸Àü °ø½Ä À¯µµ
+	// È¸ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
 	// x2 = cos(a + b), y2 = sin(a + b)
 	// cos(a + b) = cosa * cosb - sina * sinb = x1 * cosb - y1 * sinb
 	// sin(a + b) = sina * cosb + cosa * sinb = y1 * cosb + x1 * sinb 
 
-	// XÃà È¸Àü
+	// Xï¿½ï¿½ È¸ï¿½ï¿½
 	FVector xRotVec = v;
 	float rX = Radian(rotate.X);
 	xRotVec.Y = v.Y * cos(rX) - v.Z * sin(rX);
 	xRotVec.Z = v.Z * cos(rX) + v.Y * sin(rX);
 
-	// YÃà È¸Àü
+	// Yï¿½ï¿½ È¸ï¿½ï¿½
 	FVector xyRotVec = xRotVec;
 	float rY = Radian(rotate.Y);
 	xyRotVec.X = xRotVec.X * cos(rY) + xRotVec.Z * sin(rY);
 	xyRotVec.Z = xRotVec.Z * cos(rY) - xRotVec.X * sin(rY);
 
-	// ZÃà È¸Àü
+	// Zï¿½ï¿½ È¸ï¿½ï¿½
 	FVector xyzRotVec = xyRotVec;
 	float rZ = Radian(rotate.Z);
 	xyzRotVec.X = xyRotVec.X * cos(rZ) - xyRotVec.Y * sin(rZ);
@@ -519,7 +519,7 @@ void Draw_Indexed(uint* pixelBuffer, uint width, uint height, const Object* mCam
 	// world transform
 	TransformMesh(v, 0.0f, origin);
 
-	// Á¾È¾ºñ
+	// ï¿½ï¿½È¾ï¿½ï¿½
 	float screenRatio = (float)width / height;
 
 	static float maxX = 0.0f, maxY = 0.0f;
@@ -650,7 +650,7 @@ void GraphicsSW::Render()
 					if(bIsOutFrustom)
 						continue;
 
-					// Á¾È¾ºñ
+					// ï¿½ï¿½È¾ï¿½ï¿½
 					float screenRatio = (float)mWindowHeight / mWindowWidth;
 
 					static float maxX = 0.0f, maxY = 0.0f;

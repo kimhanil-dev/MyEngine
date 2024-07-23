@@ -3,15 +3,14 @@
 #include "Core/Object/Object.h"
 #include "Utill/console.h"
 #include "Utill/fbx.h"
-#include "Core/Render/Graphics/Graphics.h"
-#include "Core/Render/Graphics/GraphicsSW.h"
+#include "Core/Render/Graphics/IGraphics.h"
 
 
 #include <iostream>
 #include <functional>
 #include <vector>
+#include <cassert>
 #include <map>
-#include <algorithm>
 
 // window
 	// handle
@@ -36,7 +35,6 @@ IGraphics* gRenderer[] = {
 	GetRenderer(Renderer::Software),
 };
 
-
 // input
 	// event
 typedef std::function<void(UINT_PTR)> InputEvent;
@@ -52,13 +50,13 @@ void Init(HWND hWnd, const uint width, const uint height)
 
 	// Init Renderer
 	HRESULT hr = S_OK;
-	
+
 	// Init renderers
 	for (auto& renderer : gRenderer)
 	{
 		if (FAILED(hr = renderer->Init(ghWnd)))
 		{
-			PrintError("Renderer init failed : %08x\n", hr);
+			PrintError("Renderer init failed : %x\n", hr);
 			assert(false);
 		}
 	}
@@ -68,10 +66,10 @@ void Init(HWND hWnd, const uint width, const uint height)
 	gInputEventListeners[VK_F2] = [](UINT_PTR key) {gbIsPause = gbIsPause == false ? true : false; };	// redraw screen
 	gInputEventListeners[VK_F3] = [](UINT_PTR key) {gRenderType = gRenderType == Renderer::DriectX ? Renderer::Software : Renderer::DriectX; };		// change render type
 
-	fbx::LoadFBX("D:/CGPractice/KWorld/Resource/fbx/Box.fbx", 0);
-	fbx::LoadFBX("D:/CGPractice/KWorld/Resource/fbx/dragon.fbx", 1);
+	fbx::LoadFBX("./Resource/fbx/Box.fbx", 0);
+	fbx::LoadFBX("./Resource/fbx/dragon.fbx", 1);
 
-	gObjects.push_back(new Object(0, FVector(0.0f, 0.0f, 300.0f),0.0f,fbx::GetMesh(1)));
+	gObjects.push_back(new Object(0, FVector(0.0f, 0.0f, 300.0f), 0.0f, fbx::GetMesh(1)));
 
 	// triangle
 	gObjects.push_back(new Object(1, FVector(500.0f, 540.0f, 0.0f), 0.0f,
@@ -97,14 +95,14 @@ void Init(HWND hWnd, const uint width, const uint height)
 			renderer->AddObject(object);
 		}
 	}
-	
+
 	// camera
 	for (auto& renderer : gRenderer)
 	{
 		renderer->SetCamera(&camera);
 	}
 
-	PrintGood("Init complite");
+	//PrintGood("Init complite");
 }
 
 bool Update()
@@ -150,6 +148,7 @@ void UpdateInput(uint key)
 
 void Release()
 {
+
 	for (int i = 0; i < gObjects.size(); ++i)
 	{
 		delete gObjects[i];

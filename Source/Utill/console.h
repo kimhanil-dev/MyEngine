@@ -1,32 +1,36 @@
 #pragma once
 
-// CMD¿¡ ¹®ÀÚ¿­À» Ãâ·ÂÇÏ´Â ±â´ÉÀ» Á¦°øÇÔ
-// ÆíÀÇ¸¦ À§ÇÏ¿© °£´ÜÇÏ°Ô ÀÛ¼ºµÈ ÄÚµå
+// CMDï¿½ï¿½ ï¿½ï¿½ï¿½Ú¿ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½Ï´ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+// ï¿½ï¿½ï¿½Ç¸ï¿½ ï¿½ï¿½ï¿½Ï¿ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ï°ï¿½ ï¿½Û¼ï¿½ï¿½ï¿½ ï¿½Úµï¿½
 #include "Window/framework.h"
 
 #ifdef _DEBUG
-	#define Print(format, ...) console::printf(console::Color::white, format, __VA_ARGS__)
-	#define PrintLog(type,color, format, ...) console::printf(color, "["#type"]""[file:%s][func:%s][line:%d] : "#format"\n", __FILE__, __FUNCTION__, __LINE__,__VA_ARGS__)
-	#define PrintWarning(format, ...) PrintLog(Warning, console::Color::yellow, format, __VA_ARGS__)
-	#define PrintError(format, ...) PrintLog(Error, console::Color::red, format, __VA_ARGS__)
-	#define PrintGood(format, ...) PrintLog(Good, console::Color::green, format, __VA_ARGS__)
-#elif
-	#define print(str, color)
+#define Print(format, ...) console::printf(console::Color::white, format, __VA_ARGS__)
+#define PrintLog(type,color, format, ...) console::printf(color, "["#type"]""[file:%s][func:%s][line:%d] : "#format"\n", __FILE__, __FUNCTION__, __LINE__, __VA_ARGS__)
+#define PrintWarning(format, ...) PrintLog(Warning, console::Color::yellow, format, __VA_ARGS__)
+#define PrintError(format, ...) PrintLog(Error, console::Color::red, format, __VA_ARGS__)
+#define PrintGood(format, ...) PrintLog(Good, console::Color::green, format, __VA_ARGS__)
+#else
+#define Print(format, ...)
+#define PrintLog(type,color, format, ...)
+#define PrintWarning(format, ...)
+#define PrintError(format, ...)
+#define PrintGood(format, ...)
 #endif
 
 namespace console
 {
 	enum Color
 	{
-		start	= 1,
+		start = 1,
 
-		blue	= 9,
-		green	= 10,
-		red		= 12,
-		yellow	= 14,
-		white	= 15,
+		blue = 9,
+		green = 10,
+		red = 12,
+		yellow = 14,
+		white = 15,
 
-		end		= 254
+		end = 254
 	};
 
 	// https://stackoverflow.com/questions/4053837/colorizing-text-in-the-console-with-c
