@@ -3,6 +3,7 @@
 #include <cassert>
 
 #include "Core/Object/Object.h"
+#include "Utill/frame.h"
 
 static constexpr float PI = 3.14159265359f;
 #define Radian(Degree) Degree * (PI / 180.0f)
@@ -633,7 +634,9 @@ void GraphicsSW::Render()
 
 					// check frustom
 					bool bIsOutFrustom = false;
-					for (const auto& _v : v)
+
+
+					/*for (const auto& _v : v)
 					{
 						for (UINT j = 0; j < 4; ++j)
 						{
@@ -648,7 +651,7 @@ void GraphicsSW::Render()
 							break;
 					}
 					if(bIsOutFrustom)
-						continue;
+						continue;*/
 
 					// ��Ⱦ��
 					float screenRatio = (float)mWindowHeight / mWindowWidth;
@@ -669,12 +672,20 @@ void GraphicsSW::Render()
 						x = (1 + x) * 0.5f;
 						y = (1 + y) * 0.5f;
 
+						// 
+						x = x < 0 ? 0 : x > 1 ? 1 : x;
+						y = y < 0 ? 0 : y > 1 ? 1 : y;
+
+
 						// raster space
 						x *= mWindowWidth;
 						y *= mWindowHeight;
 
 						vertex.Position = FVector(x, y, 0.0f);
 					}
+
+					if (bIsOutFrustom)
+						continue;
 
 
 					FillTriangles(mPixelBuffer, mWindowWidth, mWindowHeight, v, mObjects[i]->mMesh->Indices, mObjects[i]->mMesh->IndexCount);
@@ -686,9 +697,20 @@ void GraphicsSW::Render()
 
 		SetBitmapBits(mRenderTarget, mWindowWidth * mWindowHeight * 4, mPixelBuffer);
 
+		RECT rt;
+		rt.left = 10;
+		rt.top = 10;
+		rt.right = 500;
+		rt.bottom = 500;
+
+		wchar_t deltaTimeStr[50];
+		swprintf_s(deltaTimeStr, 50, L"fps : %d", GetFPS());
+		DrawText(mMemDC, deltaTimeStr, -1, &rt, DT_LEFT);
+
 		BitBlt(mDC, 0, 0, mWindowWidth, mWindowHeight, mMemDC, 0, 0, SRCCOPY);
 	}
 	SelectObject(mMemDC, oldBitmap);
+
 }
 
 void GraphicsSW::Release()

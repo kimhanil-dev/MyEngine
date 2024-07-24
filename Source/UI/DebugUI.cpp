@@ -53,6 +53,7 @@ void ShowDebugUI()
 	IMGUI_CHECKVERSION();
 
 	ImGui::Begin("DebugUI");
-	ImGui::Text("FPS (%f)", DebugUI::GetData<float>("FPS"));
+	ImGui::Text("FPS (%d)", DebugUI::GetData<int>("FPS"));
 	ImGui::End();
 }
+

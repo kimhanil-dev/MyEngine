@@ -1,10 +1,11 @@
 #include "Graphics.h"
 
 #include <cassert>
-#include <d3d11.h>
 #include <d3dcompiler.h>
 
 #include "Utill/console.h"
+#include "Utill/frame.h"
+
 #include "UI/DebugUI.h"
 
 struct SimpleVertex
@@ -20,28 +21,6 @@ struct ConstantBuffer
 	XMMATRIX Projection;
 };
 
-
-template <typename Interface>
-void SafeRelease(Interface** i)
-{
-	if ((*i) != nullptr)
-	{
-		(*i)->Release();
-		(*i) = nullptr;
-	}
-}
-
-template <typename Container>
-void SafeReleaseArray(Container& container)
-{
-	for (auto* i : container)
-	{
-		i->Release();
-	}
-
-	container.clear();
-}
-
 HRESULT Graphics::Init(const HWND& hWnd)
 {
 	HRESULT hr = S_OK;
@@ -54,7 +33,7 @@ HRESULT Graphics::Init(const HWND& hWnd)
 	//*** create d3dDevice and swapchain
 	UINT createDeviceFlags = D3D11_CREATE_DEVICE_SINGLETHREADED;
 #if defined( _DEBUG ) | defined( DEBUG )
-	createDeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
+	//createDeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
 #endif
 
 	D3D_FEATURE_LEVEL featureLevels[] =
@@ -79,23 +58,25 @@ HRESULT Graphics::Init(const HWND& hWnd)
 	sd.SampleDesc.Quality = 0;
 	sd.Windowed = true;
 
+	D3D_FEATURE_LEVEL featureLevel = D3D_FEATURE_LEVEL_11_0;
+
 	hr = D3D11CreateDeviceAndSwapChain(NULL, D3D_DRIVER_TYPE_HARDWARE, NULL, createDeviceFlags, featureLevels, numFeatureLevels,
-		D3D11_SDK_VERSION, &sd, &mSwapChain, &mD3DDevice, &mFeatureLevel, &mD3DDeviceContext);
+		D3D11_SDK_VERSION, &sd, mSwapChain.GetAddressOf(), mD3DDevice.GetAddressOf(), &featureLevel, mD3DDeviceContext.GetAddressOf());
 	if (FAILED(hr))
 		return hr;
 
 	//*** set render target
-	ID3D11Texture2D* backBuffer = NULL;
-	hr = mSwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (LPVOID*)&backBuffer);
+	Microsoft::WRL::ComPtr<ID3D11Texture2D> backBuffer = NULL;
+	hr = mSwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (LPVOID*)backBuffer.GetAddressOf());
 	if (FAILED(hr))
 		return hr;
 
-	hr = mD3DDevice->CreateRenderTargetView(backBuffer, NULL, &mRenderTargetView);
-	SafeRelease(&backBuffer);
+	hr = mD3DDevice->CreateRenderTargetView(backBuffer.Get(), NULL, mRenderTargetView.GetAddressOf());
 	if (FAILED(hr))
 		return hr;
 
-	mD3DDeviceContext->OMSetRenderTargets(1, &mRenderTargetView, NULL);
+	mD3DDeviceContext->OMSetRenderTargets(1, mRenderTargetView.GetAddressOf(), NULL);
+
 
 	//*** set view port
 	D3D11_VIEWPORT vp;
@@ -109,25 +90,23 @@ HRESULT Graphics::Init(const HWND& hWnd)
 
 
 	//*** compile shader
-	ID3DBlob* errorMsg = nullptr;
-	ID3DBlob* vsBlob = nullptr;
+	Microsoft::WRL::ComPtr<ID3DBlob> errorMsg = nullptr;
+	Microsoft::WRL::ComPtr<ID3DBlob> vsBlob = nullptr;
 	hr = D3DCompileFromFile(L"Shader/SimpleVS.fx", NULL, NULL, "VS", "vs_4_0",
-		D3DCOMPILE_ENABLE_STRICTNESS, NULL, &vsBlob, &errorMsg);
+		D3DCOMPILE_ENABLE_STRICTNESS, NULL, vsBlob.GetAddressOf(), errorMsg.GetAddressOf());
 	if (FAILED(hr))
 	{
 		if (errorMsg != nullptr)
 		{
 			PrintError("Shader compile failed : %s\n", (char*)errorMsg->GetBufferPointer());
-			SafeRelease(&errorMsg);
 		}
 
 		return hr;
 	}
 
-	hr = mD3DDevice->CreateVertexShader(vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), NULL, &mVertexShader);
+	hr = mD3DDevice->CreateVertexShader(vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), NULL, mVertexShader.GetAddressOf());
 	if (FAILED(hr))
 	{
-		SafeRelease(&vsBlob);
 		return hr;
 	}
 
@@ -141,28 +120,25 @@ HRESULT Graphics::Init(const HWND& hWnd)
 	UINT numElements = ARRAYSIZE(layout);
 
 	hr = mD3DDevice->CreateInputLayout(layout, numElements, vsBlob->GetBufferPointer(),
-		vsBlob->GetBufferSize(), &mInputLayout);
-	SafeRelease(&vsBlob);
+		vsBlob->GetBufferSize(), mInputLayout.GetAddressOf());
 	if (FAILED(hr))
 		return hr;
 
-	mD3DDeviceContext->IASetInputLayout(mInputLayout);
+	mD3DDeviceContext->IASetInputLayout(mInputLayout.Get());
 
-	ID3DBlob* psBlob = nullptr;
+	Microsoft::WRL::ComPtr<ID3DBlob> psBlob = nullptr;
 	hr = D3DCompileFromFile(L"Shader/SimplePS.fx", NULL, NULL, "PS", "ps_4_0",
-		D3DCOMPILE_ENABLE_STRICTNESS, NULL, &psBlob, &errorMsg);
+		D3DCOMPILE_ENABLE_STRICTNESS, NULL, psBlob.GetAddressOf(), errorMsg.GetAddressOf());
 	if (FAILED(hr))
 	{
 		if (errorMsg != nullptr)
 		{
 			PrintError("Shader compile failed : %s\n", (char*)errorMsg->GetBufferPointer());
-			SafeRelease(&errorMsg);
 		}
 		return hr;
 	}
 
-	hr = mD3DDevice->CreatePixelShader(psBlob->GetBufferPointer(), psBlob->GetBufferSize(), NULL, &mPixelShader);
-	SafeRelease(&psBlob);
+	hr = mD3DDevice->CreatePixelShader(psBlob->GetBufferPointer(), psBlob->GetBufferSize(), NULL, mPixelShader.GetAddressOf());
 	if (FAILED(hr))
 	{
 		return hr;
@@ -194,13 +170,13 @@ HRESULT Graphics::Init(const HWND& hWnd)
 	ZeroMemory(&initData, sizeof(initData));
 	initData.pSysMem = vertices;
 
-	hr = mD3DDevice->CreateBuffer(&bd, &initData, &mVertexBuffer);
+	hr = mD3DDevice->CreateBuffer(&bd, &initData, mVertexBuffer.GetAddressOf());
 	if (FAILED(hr))
 		return hr;
 
 	UINT stride = sizeof(SimpleVertex);
 	UINT offset = 0;
-	mD3DDeviceContext->IASetVertexBuffers(0, 1, &mVertexBuffer, &stride, &offset);
+	mD3DDeviceContext->IASetVertexBuffers(0, 1, mVertexBuffer.GetAddressOf(), &stride, &offset);
 
 	//*** Create index buffer
 	WORD indices[] =
@@ -225,7 +201,7 @@ HRESULT Graphics::Init(const HWND& hWnd)
 	};
 
 	D3D11_BUFFER_DESC indexBufferDesc;
-	ZeroMemory(&indexBufferDesc,sizeof(indexBufferDesc));
+	ZeroMemory(&indexBufferDesc, sizeof(indexBufferDesc));
 	indexBufferDesc.Usage = D3D11_USAGE_DEFAULT;
 	indexBufferDesc.ByteWidth = sizeof(WORD) * 36;
 	indexBufferDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
@@ -236,67 +212,60 @@ HRESULT Graphics::Init(const HWND& hWnd)
 	ZeroMemory(&initIndexData, sizeof(initIndexData));
 	initIndexData.pSysMem = indices;
 
-	hr = mD3DDevice->CreateBuffer(&indexBufferDesc, &initIndexData,&mIndexBuffer);
-	if(FAILED(hr))
+	hr = mD3DDevice->CreateBuffer(&indexBufferDesc, &initIndexData, mIndexBuffer.GetAddressOf());
+	if (FAILED(hr))
 		return hr;
 
 	// Set index buffer
-	mD3DDeviceContext->IASetIndexBuffer(mIndexBuffer, DXGI_FORMAT_R16_UINT, 0);
+	mD3DDeviceContext->IASetIndexBuffer(mIndexBuffer.Get(), DXGI_FORMAT_R16_UINT, 0);
 
 	// set primitive topology
 	mD3DDeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 	//Create constant buffer
 	D3D11_BUFFER_DESC constantBufferDesc;
-	ZeroMemory(&constantBufferDesc,sizeof(constantBufferDesc));
+	ZeroMemory(&constantBufferDesc, sizeof(constantBufferDesc));
 	constantBufferDesc.Usage = D3D11_USAGE_DEFAULT;
 	constantBufferDesc.ByteWidth = sizeof(ConstantBuffer);
 	constantBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
 	constantBufferDesc.CPUAccessFlags = 0;
-	hr = mD3DDevice->CreateBuffer(&constantBufferDesc, NULL, &mConstantBuffer);
-	if(FAILED(hr))
+	hr = mD3DDevice->CreateBuffer(&constantBufferDesc, NULL, mConstantBuffer.GetAddressOf());
+	if (FAILED(hr))
 		return hr;
 
 	//*** initialize matrices
 	mWorld = XMMatrixIdentity();
-	mView = XMMatrixLookAtLH({0.0f,1.0f,-5.0f,0.0f}, {0.0f,1.0f,0.0f, 0.0f}, {0.0f,1.0f,0.0f, 0.0f});
-	mProjection = XMMatrixPerspectiveFovLH(XM_PIDIV2, width/(FLOAT)height, 0.1f, 100.0f);
+	mView = XMMatrixLookAtLH({ 0.0f,1.0f,-5.0f,0.0f }, { 0.0f,1.0f,0.0f, 0.0f }, { 0.0f,1.0f,0.0f, 0.0f });
+	mProjection = XMMatrixPerspectiveFovLH(XM_PIDIV2, width / (FLOAT)height, 0.1f, 100.0f);
 
-	DebugUI::Init(hWnd, mD3DDevice, mD3DDeviceContext);
+	DebugUI::Init(hWnd, mD3DDevice.Get(), mD3DDeviceContext.Get());
 
 	return S_OK;
 }
 
 void Graphics::Render()
 {
-	static ULONGLONG prevTime = 0;
-	static ULONGLONG currentTime = 0;
-	currentTime = GetTickCount64();
-	float deltaTime = (currentTime - prevTime) * 0.001f;
-	prevTime = currentTime;
-
-
 	//*** Rotate cube
-	mWorld = XMMatrixRotationY(100 * deltaTime);
+	//mWorld = XMMatrixRotationY();
 
 	//*** Clear back buffer
 	float clearColor[4] = { 0.0f, 0.125f, 0.6f, 1.0f }; //RGBA
-	mD3DDeviceContext->ClearRenderTargetView(mRenderTargetView, clearColor);
+	mD3DDeviceContext->ClearRenderTargetView(mRenderTargetView.Get(), clearColor);
 
 	//*** Update variables
 	ConstantBuffer cb;
 	cb.World = XMMatrixTranspose(mWorld);
 	cb.View = XMMatrixTranspose(mView);
 	cb.Projection = XMMatrixTranspose(mProjection);
-	mD3DDeviceContext->UpdateSubresource(mConstantBuffer, 0, NULL, &cb, 0, 0);
+	mD3DDeviceContext->UpdateSubresource(mConstantBuffer.Get(), 0, NULL, &cb, 0, 0);
 
 	//*** Render
-	mD3DDeviceContext->VSSetShader(mVertexShader, NULL, 0);
-	mD3DDeviceContext->VSSetConstantBuffers(0, 1, &mConstantBuffer);
-	mD3DDeviceContext->PSSetShader(mPixelShader, NULL, 0);
-	mD3DDeviceContext->DrawIndexed(36,0,0);
+	mD3DDeviceContext->VSSetShader(mVertexShader.Get(), NULL, 0);
+	mD3DDeviceContext->VSSetConstantBuffers(0, 1, mConstantBuffer.GetAddressOf());
+	mD3DDeviceContext->PSSetShader(mPixelShader.Get(), NULL, 0);
+	mD3DDeviceContext->DrawIndexed(36, 0, 0);
 
-	DebugUI::SetData("FPS", deltaTime);
+	DebugUI::SetData("FPS", GetFPS());
 	DebugUI::Render();
 
 	mSwapChain->Present(0, 0);
@@ -305,19 +274,6 @@ void Graphics::Render()
 void Graphics::Release()
 {
 	DebugUI::Release();
-
-	SafeRelease(&mPixelShader);
-	SafeRelease(&mVertexShader);
-
-	SafeRelease(&mConstantBuffer);
-	SafeRelease(&mIndexBuffer);
-	SafeRelease(&mVertexBuffer);
-	SafeRelease(&mInputLayout);
-
-	SafeRelease(&mRenderTargetView);
-	SafeRelease(&mSwapChain);
-	SafeRelease(&mD3DDeviceContext);
-	SafeRelease(&mD3DDevice);
 }
 
 void Graphics::SetCamera(Object* object)

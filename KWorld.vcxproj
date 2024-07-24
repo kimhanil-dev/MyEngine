@@ -163,8 +163,9 @@
     <ClInclude Include="Source\Core\Framwork\game.h" />
     <ClInclude Include="Source\Core\Object\Object.h" />
     <ClInclude Include="Source\Core\Types.h" />
+    <ClInclude Include="Source\Utill\frame.h" />
     <ClInclude Include="Source\Window\framework.h" />
-    <ClInclude Include="Source\Window\Resource.h" />
+    <ClInclude Include="Source\Window\resource.h" />
     <ClInclude Include="Source\Window\targetver.h" />
     <ClInclude Include="Source\Core\Math\Vector.h" />
     <ClInclude Include="Source\Core\Render\Vertex.h" />
@@ -187,6 +188,7 @@
     <ClCompile Include="Source\Core\Render\Graphics\IGraphics.cpp" />
     <ClCompile Include="Source\Utill\fbx.cpp" />
     <ClCompile Include="Source\Core\Framwork\game.cpp" />
+    <ClCompile Include="Source\Utill\frame.cpp" />
     <ClCompile Include="Source\Window\KWorld.cpp" />
     <ClCompile Include="Source\Core\Object\Object.cpp" />
     <ClCompile Include="Source\Core\Math\Vector.cpp" />

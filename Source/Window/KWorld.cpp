@@ -20,6 +20,7 @@ WCHAR szWindowClass[MAX_LOADSTRING];            // the main window class name
 ATOM                MyRegisterClass(HINSTANCE hInstance);
 BOOL                InitInstance(HINSTANCE, int);
 LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
+LRESULT CALLBACK	ChildWndProc(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
@@ -44,7 +45,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	}
 
 	{
-
 		MSG msg;
 		ZeroMemory(&msg, sizeof(MSG));
 
@@ -53,8 +53,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		{
 			if (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))
 			{
-					//TranslateMessage(&msg);
-					DispatchMessage(&msg);
+				//TranslateMessage(&msg);
+				DispatchMessage(&msg);
 			}
 
 			Update();
@@ -120,7 +120,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 	UpdateWindow(hWnd);
 
 	// init game
-	Init(hWnd,1920,1080);
+	Init(hWnd, 1920, 1080);
 
 	return TRUE;
 }
@@ -195,4 +195,24 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 		break;
 	}
 	return (INT_PTR)FALSE;
+}
+
+
+LRESULT CALLBACK ChildWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
+{
+	//if (ImGui_ImplWin32_WndProcHandler(hWnd, message, wParam, lParam))
+	//	return true;
+
+	switch (message)
+	{
+	case WM_CLOSE:
+		DestroyWindow(hWnd);
+		break;
+	case WM_DESTROY:
+		PostQuitMessage(0);
+		break;
+	default:
+		return DefWindowProc(hWnd, message, wParam, lParam);
+	}
+	return 0;
 }

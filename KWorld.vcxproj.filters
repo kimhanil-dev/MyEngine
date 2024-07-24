@@ -52,7 +52,7 @@
     <ClInclude Include="Source\Window\framework.h">
       <Filter>Game\Windows\headers</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Window\Resource.h">
+    <ClInclude Include="Source\Window\resource.h">
       <Filter>Game\Windows\headers</Filter>
     </ClInclude>
     <ClInclude Include="Source\Window\targetver.h">
@@ -79,6 +79,7 @@
     <ClInclude Include="imgui\imstb_textedit.h" />
     <ClInclude Include="imgui\imstb_truetype.h" />
     <ClInclude Include="Source\UI\DebugUI.h" />
+    <ClInclude Include="Source\Utill\frame.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Core\Math\Vector.cpp">
@@ -111,6 +112,7 @@
     <ClCompile Include="imgui\imgui_tables.cpp" />
     <ClCompile Include="imgui\imgui_widgets.cpp" />
     <ClCompile Include="Source\UI\DebugUI.cpp" />
+    <ClCompile Include="Source\Utill\frame.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Resource\KWorld.rc">

@@ -61,15 +61,20 @@ void Init(HWND hWnd, const uint width, const uint height)
 		}
 	}
 
-	// add input event listener
-	gInputEventListeners[VK_F1] = [](UINT_PTR key) {gbIsGameRunning = false, SendMessage(ghWnd, WM_CLOSE, NULL, NULL); };	// redraw screen
-	gInputEventListeners[VK_F2] = [](UINT_PTR key) {gbIsPause = gbIsPause == false ? true : false; };	// redraw screen
-	gInputEventListeners[VK_F3] = [](UINT_PTR key) {gRenderType = gRenderType == Renderer::DriectX ? Renderer::Software : Renderer::DriectX; };		// change render type
 
 	fbx::LoadFBX("./Resource/fbx/Box.fbx", 0);
 	fbx::LoadFBX("./Resource/fbx/dragon.fbx", 1);
 
-	gObjects.push_back(new Object(0, FVector(0.0f, 0.0f, 300.0f), 0.0f, fbx::GetMesh(1)));
+	Object* moveable = new Object(0, FVector(0.0f, 0.0f, 300.0f), 0.0f, fbx::GetMesh(1));
+
+	// add input event listener
+	gInputEventListeners[VK_F1] = [](UINT_PTR key) {gbIsGameRunning = false, SendMessage(ghWnd, WM_CLOSE, NULL, NULL); };	// redraw screen
+	gInputEventListeners[VK_F2] = [](UINT_PTR key) {gbIsPause = gbIsPause == false ? true : false; };	// redraw screen
+	gInputEventListeners[VK_F3] = [](UINT_PTR key) {gRenderType = gRenderType == Renderer::DriectX ? Renderer::Software : Renderer::DriectX; };		// change render type
+	gInputEventListeners[VK_LEFT] = [moveable](UINT_PTR key) {moveable->mOrigin.X -= 10.0f; };		// change render type
+
+
+	gObjects.push_back(moveable);
 
 	// triangle
 	gObjects.push_back(new Object(1, FVector(500.0f, 540.0f, 0.0f), 0.0f,
@@ -116,12 +121,11 @@ bool Update()
 	refreshTime += deltaSec;
 
 	// 60fps
-	if (refreshTime >= FPS_144_DELTA_TIME)
-	{
-		refreshTime -= FPS_144_DELTA_TIME;
-
-		gRenderer[static_cast<unsigned int>(gRenderType)]->Render();
-	}
+	//if (refreshTime >= FPS_144_DELTA_TIME)
+	//{
+	//	refreshTime -= FPS_144_DELTA_TIME;
+	//}
+	gRenderer[static_cast<unsigned int>(gRenderType)]->Render();
 
 	if (!gbIsPause)
 	{
