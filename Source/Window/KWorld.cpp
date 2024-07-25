@@ -1,13 +1,10 @@
 // KWorld.cpp : Defines the entry point for the application.
 //
 
+#include "pch.h"
 #include "resource.h"
 #include "Window/framework.h"
 #include "Core/Framwork/game.h"
-
-#include "imgui.h"
-#include "imgui_impl_win32.h"
-#include "imgui_impl_dx11.h"
 
 #define MAX_LOADSTRING 100
 
@@ -15,12 +12,12 @@
 HINSTANCE hInst;                                // current instance
 WCHAR szTitle[MAX_LOADSTRING];                  // The title bar text
 WCHAR szWindowClass[MAX_LOADSTRING];            // the main window class name
+FrameWork gGame;
 
 // Forward declarations of functions included in this code module:
 ATOM                MyRegisterClass(HINSTANCE hInstance);
-BOOL                InitInstance(HINSTANCE, int);
+HWND                InitInstance(HINSTANCE, int);
 LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
-LRESULT CALLBACK	ChildWndProc(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
@@ -39,11 +36,13 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	MyRegisterClass(hInstance);
 
 	// Perform application initialization:
-	if (!InitInstance(hInstance, nCmdShow))
+	HWND hWnd = InitInstance(hInstance, nCmdShow);
+	if (!hWnd)
 	{
 		return FALSE;
 	}
 
+	gGame.Init(hWnd, hInstance);
 	{
 		MSG msg;
 		ZeroMemory(&msg, sizeof(MSG));
@@ -57,10 +56,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 				DispatchMessage(&msg);
 			}
 
-			Update();
+			gGame.Update();
 		}
 
-		Release();
+		gGame.Release();
 
 		return (int)msg.wParam;
 	}
@@ -104,7 +103,7 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
 //        In this function, we save the instance handle in a global variable and
 //        create and display the main program window.
 //
-BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
+HWND InitInstance(HINSTANCE hInstance, int nCmdShow)
 {
 	hInst = hInstance; // Store instance handle in our global variable
 
@@ -113,16 +112,13 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 
 	if (!hWnd)
 	{
-		return FALSE;
+		return NULL;
 	}
 
 	ShowWindow(hWnd, nCmdShow);
 	UpdateWindow(hWnd);
 
-	// init game
-	Init(hWnd, 1920, 1080);
-
-	return TRUE;
+	return hWnd;
 }
 
 //
@@ -141,13 +137,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	if (ImGui_ImplWin32_WndProcHandler(hWnd, message, wParam, lParam))
 		return true;
 
+	gGame.OnListen(message, wParam, lParam);
+
 	switch (message)
 	{
-	case WM_KEYDOWN:
-	{
-		UpdateInput(wParam);
-	}
-	break;
 	case WM_COMMAND:
 	{
 		int wmId = LOWORD(wParam);
@@ -195,24 +188,4 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 		break;
 	}
 	return (INT_PTR)FALSE;
-}
-
-
-LRESULT CALLBACK ChildWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
-{
-	//if (ImGui_ImplWin32_WndProcHandler(hWnd, message, wParam, lParam))
-	//	return true;
-
-	switch (message)
-	{
-	case WM_CLOSE:
-		DestroyWindow(hWnd);
-		break;
-	case WM_DESTROY:
-		PostQuitMessage(0);
-		break;
-	default:
-		return DefWindowProc(hWnd, message, wParam, lParam);
-	}
-	return 0;
 }

@@ -2,10 +2,10 @@
 
 #include "IGraphics.h"
 
-#include <wrl.h>
-#include <vector>
 #include <d3d11.h>
 #include <DirectXMath.h>
+#include <wrl.h>
+
 
 using namespace std;
 using namespace DirectX;
@@ -18,6 +18,10 @@ public:
 	virtual void Release() override;
 
 private:
+
+	unsigned int mWndClientWidth = 0;
+	unsigned int mWndClientHeight = 0;
+
 	Microsoft::WRL::ComPtr<ID3D11Device>			mD3DDevice;
 	Microsoft::WRL::ComPtr<ID3D11DeviceContext>		mD3DDeviceContext;
 	Microsoft::WRL::ComPtr<IDXGISwapChain>			mSwapChain;
@@ -38,4 +42,8 @@ private:
 	// Inherited via IGraphics
 	void SetCamera(Object* object) override;
 	virtual void AddObject(Object* object);
+
+	// IGraphics을(를) 통해 상속됨
+	void ResizeWindow(UINT width, UINT height) override;
+	HRESULT CreateRenderTargetView();
 };

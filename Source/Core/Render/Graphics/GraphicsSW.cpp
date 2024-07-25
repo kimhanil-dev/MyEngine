@@ -1,6 +1,5 @@
+#include "pch.h"
 #include "GraphicsSW.h"
-
-#include <cassert>
 
 #include "Core/Object/Object.h"
 #include "Utill/frame.h"
@@ -733,4 +732,9 @@ void GraphicsSW::AddObject(Object* object)
 void GraphicsSW::SetCamera(Object* object)
 {
 	mCamera = object;
+}
+
+void GraphicsSW::ResizeWindow(UINT width, UINT height)
+{
+	// do
 }

@@ -1,4 +1,3 @@
-
 struct Matrix4x4
 {
 	float m11, m12, m13, m14,

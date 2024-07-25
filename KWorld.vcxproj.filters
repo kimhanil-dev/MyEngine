@@ -80,6 +80,11 @@
     <ClInclude Include="imgui\imstb_truetype.h" />
     <ClInclude Include="Source\UI\DebugUI.h" />
     <ClInclude Include="Source\Utill\frame.h" />
+    <ClInclude Include="pch.h" />
+    <ClInclude Include="Source\Core\Input\InputManager.h" />
+    <ClInclude Include="Source\Window\IWinMsgListener.h" />
+    <ClInclude Include="Source\Core\Render\Graphics\GraphicsFactory.h" />
+    <ClInclude Include="Resource\resource.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Core\Math\Vector.cpp">
@@ -99,7 +104,6 @@
     </ClCompile>
     <ClCompile Include="Source\Core\Render\Graphics\Graphics.cpp" />
     <ClCompile Include="Source\Core\Render\Graphics\GraphicsSW.cpp" />
-    <ClCompile Include="Source\Core\Render\Graphics\IGraphics.cpp" />
     <ClCompile Include="Source\Core\Math\Plane.cpp" />
     <ClCompile Include="Source\Core\Math\Matrix.h" />
     <ClCompile Include="Source\Core\Math\Math.cpp" />
@@ -113,6 +117,9 @@
     <ClCompile Include="imgui\imgui_widgets.cpp" />
     <ClCompile Include="Source\UI\DebugUI.cpp" />
     <ClCompile Include="Source\Utill\frame.cpp" />
+    <ClCompile Include="pch.cpp" />
+    <ClCompile Include="Source\Core\Input\InputManager.cpp" />
+    <ClCompile Include="Source\Core\Render\Graphics\GraphicsFactory.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Resource\KWorld.rc">

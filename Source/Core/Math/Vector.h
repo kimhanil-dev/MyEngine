@@ -1,6 +1,6 @@
 #pragma once
 
-#include <cmath>
+#include <math.h>
 
 template <typename T>
 class Vector
@@ -25,7 +25,7 @@ public:
 	Vector<T> Cross(const Vector<T>& v) const { return { Y * v.Z - Z * v.Y, Z * v.X - X * v.Z, X * v.Y - Y * v.X }; }
 	float Dot(const Vector<T>& v) const { return { X * v.X + Y * v.Y + Z * v.Z }; }
 	float Length2() const { return X * X + Y * Y + Z * Z; }
-	float Length() const { return sqrt(X * X + Y * Y + Z * Z); }
+	float Length() const { return sqrtf(X * X + Y * Y + Z * Z); }
 	Vector<T>& Normalize()
 	{
 		float invNor = 1 / Length();

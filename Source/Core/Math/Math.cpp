@@ -1,3 +1,4 @@
+#include "pch.h"
 #include "Math.h"
 
 FVector Mul(const FVector& v, const Matrix4x4& m)

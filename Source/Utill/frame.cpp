@@ -1,6 +1,6 @@
+#include "pch.h"
 #include "frame.h"
 
-#include <Windows.h>
 
 int GetFPS()
 {

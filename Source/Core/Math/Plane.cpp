@@ -1,3 +1,4 @@
+#include "pch.h"
 #include "Plane.h"
 
 PlaneRelation CalculatePointPlaneRelation(const Plane& plane, const FVector& position)

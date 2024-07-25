@@ -1,7 +1,5 @@
+#include "pch.h"
 #include "Graphics.h"
-
-#include <cassert>
-#include <d3dcompiler.h>
 
 #include "Utill/console.h"
 #include "Utill/frame.h"
@@ -27,8 +25,8 @@ HRESULT Graphics::Init(const HWND& hWnd)
 
 	RECT rc;
 	GetClientRect(hWnd, &rc);
-	UINT width = rc.right - rc.left;
-	UINT height = rc.bottom - rc.top;
+	mWndClientWidth = rc.right - rc.left;
+	mWndClientHeight = rc.bottom - rc.top;
 
 	//*** create d3dDevice and swapchain
 	UINT createDeviceFlags = D3D11_CREATE_DEVICE_SINGLETHREADED;
@@ -47,8 +45,8 @@ HRESULT Graphics::Init(const HWND& hWnd)
 	DXGI_SWAP_CHAIN_DESC sd;
 	ZeroMemory(&sd, sizeof(sd));
 	sd.BufferCount = 1;
-	sd.BufferDesc.Width = width;
-	sd.BufferDesc.Height = height;
+	sd.BufferDesc.Width  = mWndClientWidth;
+	sd.BufferDesc.Height = mWndClientHeight;
 	sd.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 	sd.BufferDesc.RefreshRate.Numerator = 60;
 	sd.BufferDesc.RefreshRate.Denominator = 1;
@@ -65,23 +63,20 @@ HRESULT Graphics::Init(const HWND& hWnd)
 	if (FAILED(hr))
 		return hr;
 
-	//*** set render target
-	Microsoft::WRL::ComPtr<ID3D11Texture2D> backBuffer = NULL;
-	hr = mSwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (LPVOID*)backBuffer.GetAddressOf());
+	hr = CreateRenderTargetView();
 	if (FAILED(hr))
+	{
+		PrintError("CreatRenderTargetView failed : {%x}\n", GetLastError());
 		return hr;
-
-	hr = mD3DDevice->CreateRenderTargetView(backBuffer.Get(), NULL, mRenderTargetView.GetAddressOf());
-	if (FAILED(hr))
-		return hr;
+	}
 
 	mD3DDeviceContext->OMSetRenderTargets(1, mRenderTargetView.GetAddressOf(), NULL);
 
 
 	//*** set view port
 	D3D11_VIEWPORT vp;
-	vp.Width = (FLOAT)width;
-	vp.Height = (FLOAT)height;
+	vp.Width = (FLOAT)mWndClientWidth;
+	vp.Height = (FLOAT)mWndClientHeight;
 	vp.MinDepth = 0.0f;
 	vp.MaxDepth = 1.0f;
 	vp.TopLeftX = 0;
@@ -236,7 +231,7 @@ HRESULT Graphics::Init(const HWND& hWnd)
 	//*** initialize matrices
 	mWorld = XMMatrixIdentity();
 	mView = XMMatrixLookAtLH({ 0.0f,1.0f,-5.0f,0.0f }, { 0.0f,1.0f,0.0f, 0.0f }, { 0.0f,1.0f,0.0f, 0.0f });
-	mProjection = XMMatrixPerspectiveFovLH(XM_PIDIV2, width / (FLOAT)height, 0.1f, 100.0f);
+	mProjection = XMMatrixPerspectiveFovLH(XM_PIDIV2, mWndClientWidth / (FLOAT)mWndClientHeight, 0.1f, 100.0f);
 
 	DebugUI::Init(hWnd, mD3DDevice.Get(), mD3DDeviceContext.Get());
 
@@ -282,4 +277,40 @@ void Graphics::SetCamera(Object* object)
 
 void Graphics::AddObject(Object* object)
 {
+}
+
+void Graphics::ResizeWindow(UINT width, UINT height)
+{
+	mWndClientWidth = width;
+	mWndClientHeight = height;
+
+	mD3DDeviceContext->OMSetRenderTargets(0, NULL, NULL);
+
+	if (mRenderTargetView)
+		mRenderTargetView = nullptr;
+
+	mSwapChain->ResizeBuffers(2, mWndClientWidth, mWndClientHeight, DXGI_FORMAT_R8G8B8A8_UNORM, 0);
+
+	HRESULT hr = CreateRenderTargetView();
+	if (FAILED(hr))
+	{
+		PrintError("CreatRenderTargetView failed : {%x}\n", GetLastError());
+		assert(false);
+	}
+}
+
+HRESULT Graphics::CreateRenderTargetView()
+{
+	HRESULT hr = S_OK;
+
+	ID3D11Buffer* backBuffer = nullptr;
+	hr = mSwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (LPVOID*)&backBuffer);
+	if (FAILED(hr))
+		return hr;
+
+	hr = mD3DDevice->CreateRenderTargetView(backBuffer, NULL, mRenderTargetView.GetAddressOf());
+	if (FAILED(hr))
+		return hr;
+
+	return hr;
 }

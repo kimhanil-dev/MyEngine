@@ -36,5 +36,8 @@ private:
 
 	// Inherited via IGraphics
 	void SetCamera(Object* object) override;
+
+	// IGraphics을(를) 통해 상속됨
+	void ResizeWindow(UINT width, UINT height) override;
 };
 

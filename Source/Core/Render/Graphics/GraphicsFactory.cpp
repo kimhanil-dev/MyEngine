@@ -1,8 +1,8 @@
-#include "IGraphics.h"
+#include "pch.h"
 
+#include "GraphicsFactory.h"
 #include "Graphics.h"
 #include "GraphicsSW.h"
-
 
 IGraphics* GetRenderer(Renderer renderer)
 {
@@ -13,13 +13,13 @@ IGraphics* GetRenderer(Renderer renderer)
 		static Graphics dx;
 		return &dx;
 	}
-		break;
+	break;
 	case Renderer::Software:
 	{
 		static GraphicsSW sw;
 		return &sw;
 	}
-		break;
+	break;
 	default:
 		break;
 	}

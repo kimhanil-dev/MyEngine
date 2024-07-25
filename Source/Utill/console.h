@@ -4,12 +4,12 @@
 // ���Ǹ� ���Ͽ� �����ϰ� �ۼ��� �ڵ�
 #include "Window/framework.h"
 
-#ifdef _DEBUG
-#define Print(format, ...) console::printf(console::Color::white, format, __VA_ARGS__)
-#define PrintLog(type,color, format, ...) console::printf(color, "["#type"]""[file:%s][func:%s][line:%d] : "#format"\n", __FILE__, __FUNCTION__, __LINE__, __VA_ARGS__)
-#define PrintWarning(format, ...) PrintLog(Warning, console::Color::yellow, format, __VA_ARGS__)
-#define PrintError(format, ...) PrintLog(Error, console::Color::red, format, __VA_ARGS__)
-#define PrintGood(format, ...) PrintLog(Good, console::Color::green, format, __VA_ARGS__)
+#ifdef _DEBUG															// ##의 의미 : 가변인자가 존재하지 않을때 ','를 제거해주는 기능
+#define Print(format, ...) console::printf(console::Color::white, format, ##__VA_ARGS__)
+#define PrintLog(type,color, format, ...) console::printf(color, "["#type"]""[file:%s][func:%s][line:%d] : "#format"\n", __FILE__, __FUNCTION__, __LINE__, ##__VA_ARGS__)
+#define PrintWarning(format, ...) PrintLog(Warning, console::Color::yellow, format, ##__VA_ARGS__)
+#define PrintError(format, ...) PrintLog(Error, console::Color::red, format, ##__VA_ARGS__)
+#define PrintGood(format, ...) PrintLog(Good, console::Color::green, format, ##__VA_ARGS__)
 #else
 #define Print(format, ...)
 #define PrintLog(type,color, format, ...)

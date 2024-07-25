@@ -1,11 +1,6 @@
+#include "pch.h"
 #include "fbx.h"
 
-#include <Windows.h>
-#include <iostream>
-#include <tchar.h>
-#include <map>
-
-#include <fbxsdk.h>
 #include <fbxsdk/fileio/fbxiosettings.h>
 
 #include "console.h"

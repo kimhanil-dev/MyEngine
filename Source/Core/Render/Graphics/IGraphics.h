@@ -1,16 +1,5 @@
 #pragma once
-
 #include <Windows.h>
-
-enum class Renderer : unsigned int
-{
-	DriectX,
-	Software,
-	// add renderer here
-	
-	// ...
-	Count,
-};
 
 class Object;
 
@@ -21,8 +10,7 @@ public:
 	virtual void Render() = 0;
 	virtual void Release() = 0;
 
+	virtual void ResizeWindow(UINT width, UINT height) = 0;
 	virtual void AddObject(Object* object) = 0;
 	virtual void SetCamera(Object* object) = 0;
 };
-
-IGraphics* GetRenderer(Renderer renderer);

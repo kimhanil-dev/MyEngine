@@ -1,83 +1,49 @@
+#include "pch.h"
 #include "game.h"
 
-#include "Core/Object/Object.h"
 #include "Utill/console.h"
 #include "Utill/fbx.h"
+#include "Core/Object/Object.h"
 #include "Core/Render/Graphics/IGraphics.h"
 
-
-#include <iostream>
-#include <functional>
-#include <vector>
-#include <cassert>
-#include <map>
-
-// window
-	// handle
-HWND ghWnd = NULL;
-
-// game
-	// state
-bool gbIsGameRunning = true;
-bool gbIsPause = false;
-// object
-static std::vector<Object*> gObjects;
-// camera
-static Object camera;
-
-// frame
-static float constexpr FPS_60_DELTA_TIME = 1.0f / 60.0f;
-static float constexpr FPS_144_DELTA_TIME = 1.0f / 144.0f;
-
-//render
-IGraphics* gRenderer[] = {
-	GetRenderer(Renderer::DriectX),
-	GetRenderer(Renderer::Software),
-};
-
-// input
-	// event
-typedef std::function<void(UINT_PTR)> InputEvent;
-std::map<UINT_PTR, InputEvent> gInputEventListeners;
-
-// 0 : SW
-// 1 : D2D
-Renderer gRenderType = Renderer::Software;
-
-void Init(HWND hWnd, const uint width, const uint height)
+void FrameWork::Init(HWND hWnd, HINSTANCE hInstance)
 {
-	ghWnd = hWnd;
+	mhWnd = hWnd;
 
-	// Init Renderer
 	HRESULT hr = S_OK;
 
 	// Init renderers
-	for (auto& renderer : gRenderer)
+	mRenderers[(UINT)Renderer::DriectX] = GetRenderer(Renderer::DriectX);
+	mRenderers[(UINT)Renderer::Software] = GetRenderer(Renderer::Software);
+
+	for (auto& renderer : mRenderers)
 	{
-		if (FAILED(hr = renderer->Init(ghWnd)))
+		if (FAILED(hr = renderer->Init(mhWnd)))
 		{
 			PrintError("Renderer init failed : %x\n", hr);
 			assert(false);
 		}
 	}
 
-
 	fbx::LoadFBX("./Resource/fbx/Box.fbx", 0);
 	fbx::LoadFBX("./Resource/fbx/dragon.fbx", 1);
 
 	Object* moveable = new Object(0, FVector(0.0f, 0.0f, 300.0f), 0.0f, fbx::GetMesh(1));
 
-	// add input event listener
-	gInputEventListeners[VK_F1] = [](UINT_PTR key) {gbIsGameRunning = false, SendMessage(ghWnd, WM_CLOSE, NULL, NULL); };	// redraw screen
-	gInputEventListeners[VK_F2] = [](UINT_PTR key) {gbIsPause = gbIsPause == false ? true : false; };	// redraw screen
-	gInputEventListeners[VK_F3] = [](UINT_PTR key) {gRenderType = gRenderType == Renderer::DriectX ? Renderer::Software : Renderer::DriectX; };		// change render type
-	gInputEventListeners[VK_LEFT] = [moveable](UINT_PTR key) {moveable->mOrigin.X -= 10.0f; };		// change render type
+	// init input manager
+	if (mInputManager == nullptr)
+		mInputManager = make_unique<InputManager>();
+	mInputManager->BindInput(VK_F1, InputManager::KeyState::Down, [this](unsigned int key, InputManager::KeyState state) {mCurState = State::Destroy, SendMessage(mhWnd, WM_CLOSE, NULL, NULL); });
+	mInputManager->BindInput(VK_F2, InputManager::KeyState::Down, [this](unsigned int key, InputManager::KeyState state) {mCurState = mCurState == State::Pause ? State::Idle : State::Pause; });
+	mInputManager->BindInput(VK_F3, InputManager::KeyState::Down, [this](unsigned int key, InputManager::KeyState state) {mRenderType = mRenderType == Renderer::DriectX ? Renderer::Software : Renderer::DriectX; });
+	mInputManager->BindInput(VK_LEFT, InputManager::KeyState::Down, [moveable](unsigned int key, InputManager::KeyState state) {moveable->mOrigin.X -= 10.0f; });
+	mInputManager->BindInput_MousePos([](InputManager::MousePos pos) {Print("Mouse X{%d}:Y{%d}\n", pos.X, pos.Y); });
 
-
-	gObjects.push_back(moveable);
+	mCamera = new Object(0, 0.0f, 0.0f);
+	mObjects.push_back(moveable);
 
 	// triangle
-	gObjects.push_back(new Object(1, FVector(500.0f, 540.0f, 0.0f), 0.0f,
+	mObjects.push_back(new Object(1, FVector(500.0f, 540.0f, 0.0f), 0.0f,
 		{
 		{FVector(0.0f,-50.0f,0.0f), FVector(1.0f,0.0f,0.0f)},
 		{FVector(50.0f,50.0f,0.0f), FVector(0.0f,1.0f,0.0f) },
@@ -85,7 +51,7 @@ void Init(HWND hWnd, const uint width, const uint height)
 		{FVector(0.0f,-50.0f,0.0f), FVector(0.0f)},
 		}));
 
-	gObjects.push_back(new Object(1, FVector(600.0f, 540.0f, 0.0f), 0.0f,
+	mObjects.push_back(new Object(1, FVector(600.0f, 540.0f, 0.0f), 0.0f,
 		{
 		{FVector(0.0f,50.0f,0.0f), FVector(0.0f) },
 		{FVector(50.0f,-50.0f,0.0f), FVector(0.0f)},
@@ -93,24 +59,22 @@ void Init(HWND hWnd, const uint width, const uint height)
 		{FVector(0.0f,50.0f,0.0f), FVector(0.0f)},
 		}));
 
-	for (auto object : gObjects)
+	for (auto object : mObjects)
 	{
-		for (auto& renderer : gRenderer)
+		for (auto& renderer : mRenderers)
 		{
 			renderer->AddObject(object);
 		}
 	}
 
 	// camera
-	for (auto& renderer : gRenderer)
+	for (auto& renderer : mRenderers)
 	{
-		renderer->SetCamera(&camera);
+		renderer->SetCamera(mCamera);
 	}
-
-	//PrintGood("Init complite");
 }
 
-bool Update()
+void FrameWork::Update()
 {
 	static ULONGLONG prevTime = GetTickCount64();
 	ULONGLONG time = GetTickCount64();
@@ -120,48 +84,58 @@ bool Update()
 	static float refreshTime = 0.0f;
 	refreshTime += deltaSec;
 
-	// 60fps
-	//if (refreshTime >= FPS_144_DELTA_TIME)
-	//{
-	//	refreshTime -= FPS_144_DELTA_TIME;
-	//}
-	gRenderer[static_cast<unsigned int>(gRenderType)]->Render();
+	mRenderers[(UINT)mRenderType]->Render();
 
-	if (!gbIsPause)
+	switch (mCurState)
+	{
+	case FrameWork::State::Idle:
 	{
 		constexpr float rotateSpeed = 50.0f;
-		for (int i = 0; i < gObjects.size(); ++i)
+		for (int i = 0; i < mObjects.size(); ++i)
 		{
-			gObjects[i]->mRotate += rotateSpeed * deltaSec;
+			mObjects[i]->mRotate += rotateSpeed * deltaSec;
 		}
+	}
+	break;
+	case FrameWork::State::Pause:
+		break;
+	default:
+		break;
 	}
 
 	prevTime = time;
-
-	return gbIsGameRunning;
 }
 
-void UpdateInput(uint key)
+void FrameWork::Release()
 {
-	auto inputListener = gInputEventListeners.find(key);
-	if (inputListener != gInputEventListeners.end())
+	if (mCamera != nullptr)
 	{
-		inputListener->second(key);
+		delete mCamera;
+		mCamera = nullptr;
 	}
-}
 
-void Release()
-{
-
-	for (int i = 0; i < gObjects.size(); ++i)
+	for (int i = 0; i < mObjects.size(); ++i)
 	{
-		delete gObjects[i];
+		delete mObjects[i];
 	}
 
 	fbx::Release();
 
-	gObjects.clear();
+	mObjects.clear();
 
-	for (auto& renderer : gRenderer)
+	for (auto& renderer : mRenderers)
 		renderer->Release();
+}
+
+void FrameWork::OnListen(const unsigned int& msg, const __int64& wParam, const __int64& lParam)
+{
+	if (mInputManager != nullptr)
+		static_cast<IWinMsgListener*>(mInputManager.get())->OnListen(msg, wParam, lParam);
+
+	if (msg == WM_SIZE)
+	{
+		//TODO : fix
+		if(mRenderers[(UINT)mRenderType] != nullptr)
+			mRenderers[(UINT)mRenderType]->ResizeWindow(LOWORD(lParam), HIWORD(lParam));
+	}
 }
