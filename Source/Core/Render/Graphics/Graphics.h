@@ -19,6 +19,8 @@ public:
 
 private:
 
+	HWND mhWnd = NULL;
+
 	unsigned int mWndClientWidth = 0;
 	unsigned int mWndClientHeight = 0;
 
@@ -44,6 +46,6 @@ private:
 	virtual void AddObject(Object* object);
 
 	// IGraphics을(를) 통해 상속됨
-	void ResizeWindow(UINT width, UINT height) override;
-	HRESULT CreateRenderTargetView();
+	void ResizeWindow(uint width, uint height) override;
+	HRESULT CreateAndApplyRenderTargetView(ID3D11Device* d3d11Device, ID3D11DeviceContext* d3d11DeviceContext, IDXGISwapChain* swapChain);
 };

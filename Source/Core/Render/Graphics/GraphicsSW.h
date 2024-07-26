@@ -22,9 +22,9 @@ private:
 	HDC mDC = NULL;
 	HDC mMemDC = NULL;
 	HBITMAP mRenderTarget = NULL;
-	UINT mWindowWidth = 0;
-	UINT mWindowHeight = 0;
-	UINT* mPixelBuffer = nullptr;
+	uint mWindowWidth = 0;
+	uint mWindowHeight = 0;
+	uint* mPixelBuffer = nullptr;
 
 	Plane mFrustomPlanes[6];
 
@@ -38,6 +38,6 @@ private:
 	void SetCamera(Object* object) override;
 
 	// IGraphics을(를) 통해 상속됨
-	void ResizeWindow(UINT width, UINT height) override;
+	void ResizeWindow(uint width, uint height) override;
 };
 

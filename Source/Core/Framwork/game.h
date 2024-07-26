@@ -7,6 +7,8 @@
 #include "Window/IWinMsgListener.h"
 #include "Core/Input/inputManager.h"
 
+#include "Core/Types.h"
+
 using namespace std;
 
 class IGraphics;
@@ -36,7 +38,7 @@ private:
 	};
 	State mCurState = State::Idle;
 
-	IGraphics* mRenderers[(UINT)Renderer::Count];
+	IGraphics* mRenderers[(uint)Renderer::Count];
 	Renderer mRenderType = Renderer::DriectX;
 
 	Object* mCamera = nullptr;
@@ -45,4 +47,4 @@ private:
 	unique_ptr<InputManager> mInputManager;
 };
 
-void UpdateInput(UINT key);
+void UpdateInput(uint key);

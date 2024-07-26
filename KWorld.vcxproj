@@ -148,6 +148,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Resource\resource.h" />
+    <ClInclude Include="Source\Core\Framwork\Timer.h" />
     <ClInclude Include="Source\Core\Input\InputManager.h" />
     <ClInclude Include="Source\Core\Render\Graphics\GraphicsFactory.h" />
     <ClInclude Include="Source\UI\DebugUI.h" />
@@ -180,6 +181,7 @@
     <ClInclude Include="pch.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Source\Core\Framwork\Timer.cpp" />
     <ClCompile Include="Source\Core\Input\InputManager.cpp" />
     <ClCompile Include="Source\Core\Render\Graphics\GraphicsFactory.cpp" />
     <ClCompile Include="Source\UI\DebugUI.cpp" />

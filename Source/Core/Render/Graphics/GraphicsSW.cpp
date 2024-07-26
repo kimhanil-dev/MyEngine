@@ -155,7 +155,7 @@ FVector ColorInterpolation(const FVector& fromColor, const FVector& toColor, con
 	return fromColor + (toColor - fromColor) * ratio;
 }
 
-uint ColorToUINT(const FVector& color)
+uint ColorTouint(const FVector& color)
 {
 	return (int)(color.X * 255) << 16 | (int)(color.Y * 255) << 8 | (int)(color.Z * 255);
 }
@@ -240,7 +240,7 @@ void FillTriangleScanLine(uint* pixelBuffer, const uint width, const uint height
 		for (int x = static_cast<int>(startX); x < static_cast<int>(endX); ++x)
 		{
 			FVector color = ColorInterpolation(startColor, endColor, (x - startX) / (endX - startX));
-			pixelBuffer[pixelPos + x] = ColorToUINT(color);
+			pixelBuffer[pixelPos + x] = ColorTouint(color);
 		}
 	}
 }
@@ -316,7 +316,7 @@ void FillTriangleScanLine(uint* pixelBuffer, const uint width, const uint height
 		for (int x = static_cast<int>(startX); x < static_cast<int>(endX); ++x)
 		{
 			FVector color = ColorInterpolation(startColor, endColor, (x - startX) / (endX - startX));
-			pixelBuffer[pixelPos + x] = ColorToUINT(color);
+			pixelBuffer[pixelPos + x] = ColorTouint(color);
 		}
 	}
 }
@@ -460,7 +460,7 @@ void Translate(FVector& v, const FVector& deltaLocaiton)
 
 void FillTriangles(uint* pixelBuffer, uint width, uint height, const std::vector<Vertex>& vertices, const int* indices, const uint indexCount)
 {
-	for (UINT i = 0; i < indexCount; i += 3)
+	for (uint i = 0; i < indexCount; i += 3)
 	{
 		if (IsBackfacePolygon({ vertices[indices[i]].Position, vertices[indices[i + 1]].Position,vertices[indices[i + 2]].Position }))
 			continue;
@@ -471,7 +471,7 @@ void FillTriangles(uint* pixelBuffer, uint width, uint height, const std::vector
 
 void DrawLines(uint* pixelBuffer, uint width, uint height, const std::vector<FVector>& vertices, const int* indices, const uint indexCount)
 {
-	for (UINT i = 0; i < indexCount; i += 3)
+	for (uint i = 0; i < indexCount; i += 3)
 	{
 		DrawLine(pixelBuffer, width, height, vertices[indices[i]], vertices[indices[i + 1]]);
 		DrawLine(pixelBuffer, width, height, vertices[indices[i + 1]], vertices[indices[i + 2]]);
@@ -481,7 +481,7 @@ void DrawLines(uint* pixelBuffer, uint width, uint height, const std::vector<FVe
 
 void DrawLines(uint* pixelBuffer, uint width, uint height, const std::vector<Vertex>& vertices, const int* indices, const uint indexCount)
 {
-	for (UINT i = 0; i < indexCount; i += 3)
+	for (uint i = 0; i < indexCount; i += 3)
 	{
 		if (IsBackfacePolygon({ vertices[indices[i]].Position, vertices[indices[i + 1]].Position,vertices[indices[i + 2]].Position }))
 			continue;
@@ -620,7 +620,7 @@ void GraphicsSW::Render()
 					FVector rotate = mObjects[i]->mRotate - mCamera->mRotate;
 					FVector origin = mObjects[i]->mOrigin - mCamera->mOrigin;
 					std::vector<Vertex> v = std::vector<Vertex>(mObjects[i]->mMesh->VertexCount);
-					for (UINT j = 0; j < mObjects[i]->mMesh->VertexCount; ++j)
+					for (uint j = 0; j < mObjects[i]->mMesh->VertexCount; ++j)
 					{
 						v[j] = mObjects[i]->mMesh->Vertices[j];
 					}
@@ -637,7 +637,7 @@ void GraphicsSW::Render()
 
 					/*for (const auto& _v : v)
 					{
-						for (UINT j = 0; j < 4; ++j)
+						for (uint j = 0; j < 4; ++j)
 						{
 							if (CalculatePointPlaneRelation(mFrustomPlanes[i], _v.Position) != PlaneRelation::PP_Back)
 							{
@@ -734,7 +734,7 @@ void GraphicsSW::SetCamera(Object* object)
 	mCamera = object;
 }
 
-void GraphicsSW::ResizeWindow(UINT width, UINT height)
+void GraphicsSW::ResizeWindow(uint width, uint height)
 {
 	// do
 }

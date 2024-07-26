@@ -85,6 +85,7 @@
     <ClInclude Include="Source\Window\IWinMsgListener.h" />
     <ClInclude Include="Source\Core\Render\Graphics\GraphicsFactory.h" />
     <ClInclude Include="Resource\resource.h" />
+    <ClInclude Include="Source\Core\Framwork\Timer.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Core\Math\Vector.cpp">
@@ -120,6 +121,7 @@
     <ClCompile Include="pch.cpp" />
     <ClCompile Include="Source\Core\Input\InputManager.cpp" />
     <ClCompile Include="Source\Core\Render\Graphics\GraphicsFactory.cpp" />
+    <ClCompile Include="Source\Core\Framwork\Timer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Resource\KWorld.rc">

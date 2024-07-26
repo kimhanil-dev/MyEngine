@@ -21,6 +21,8 @@ struct ConstantBuffer
 
 HRESULT Graphics::Init(const HWND& hWnd)
 {
+	mhWnd = hWnd;
+
 	HRESULT hr = S_OK;
 
 	RECT rc;
@@ -29,10 +31,12 @@ HRESULT Graphics::Init(const HWND& hWnd)
 	mWndClientHeight = rc.bottom - rc.top;
 
 	//*** create d3dDevice and swapchain
-	UINT createDeviceFlags = D3D11_CREATE_DEVICE_SINGLETHREADED;
+	uint createDeviceFlags = D3D11_CREATE_DEVICE_SINGLETHREADED;
 #if defined( _DEBUG ) | defined( DEBUG )
 	//createDeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
 #endif
+
+	int* test = nullptr;
 
 	D3D_FEATURE_LEVEL featureLevels[] =
 	{
@@ -40,12 +44,12 @@ HRESULT Graphics::Init(const HWND& hWnd)
 		D3D_FEATURE_LEVEL_10_1,
 		D3D_FEATURE_LEVEL_10_0
 	};
-	UINT numFeatureLevels = ARRAYSIZE(featureLevels);
+	uint numFeatureLevels = ARRAYSIZE(featureLevels);
 
 	DXGI_SWAP_CHAIN_DESC sd;
 	ZeroMemory(&sd, sizeof(sd));
 	sd.BufferCount = 1;
-	sd.BufferDesc.Width  = mWndClientWidth;
+	sd.BufferDesc.Width = mWndClientWidth;
 	sd.BufferDesc.Height = mWndClientHeight;
 	sd.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 	sd.BufferDesc.RefreshRate.Numerator = 60;
@@ -63,15 +67,15 @@ HRESULT Graphics::Init(const HWND& hWnd)
 	if (FAILED(hr))
 		return hr;
 
-	hr = CreateRenderTargetView();
+	hr = CreateAndApplyRenderTargetView(
+		mD3DDevice.Get(),
+		mD3DDeviceContext.Get(),
+		mSwapChain.Get());
 	if (FAILED(hr))
 	{
 		PrintError("CreatRenderTargetView failed : {%x}\n", GetLastError());
 		return hr;
 	}
-
-	mD3DDeviceContext->OMSetRenderTargets(1, mRenderTargetView.GetAddressOf(), NULL);
-
 
 	//*** set view port
 	D3D11_VIEWPORT vp;
@@ -112,7 +116,7 @@ HRESULT Graphics::Init(const HWND& hWnd)
 		{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
 		{"COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0},
 	};
-	UINT numElements = ARRAYSIZE(layout);
+	uint numElements = ARRAYSIZE(layout);
 
 	hr = mD3DDevice->CreateInputLayout(layout, numElements, vsBlob->GetBufferPointer(),
 		vsBlob->GetBufferSize(), mInputLayout.GetAddressOf());
@@ -169,8 +173,8 @@ HRESULT Graphics::Init(const HWND& hWnd)
 	if (FAILED(hr))
 		return hr;
 
-	UINT stride = sizeof(SimpleVertex);
-	UINT offset = 0;
+	uint stride = sizeof(SimpleVertex);
+	uint offset = 0;
 	mD3DDeviceContext->IASetVertexBuffers(0, 1, mVertexBuffer.GetAddressOf(), &stride, &offset);
 
 	//*** Create index buffer
@@ -279,38 +283,105 @@ void Graphics::AddObject(Object* object)
 {
 }
 
-void Graphics::ResizeWindow(UINT width, UINT height)
+void Graphics::ResizeWindow(uint width, uint height)
 {
 	mWndClientWidth = width;
 	mWndClientHeight = height;
+
+	HRESULT hr = S_OK;
+
+	/*
+	// Alt + Enter 단축키 or IDXGISwapChain::SetFullScreenState()를 통해 전체 화면으로 변경될때
+	// 이 경우 DXGI는 Front Buffer를 최대 해상도 [ex) 1920x1080]으로 설정한다.
+	// 그러나 WM_SIZE 메세지를 통해 전달되는 해상도는 메뉴바의 높이를 제외한(1080 - MenuBarHeight) 크기를 전달 받게 된다.
+	// 따라서, 이 값으로 재 설정한 BackBuffer는 Front Buffer와 해상도 차이(Menu Bar 높이 만큼)가 발생하게 된다.
+	// 이를 해결하기 위해, GetFullScreenState() == true 일때 메인 모니터의 전체화면 해상도를 불러와 Backbuffer를 초기화 시킨다.
+	BOOL bIsFullScreen = false;
+	IDXGIOutput* mainOutput = nullptr;
+
+	mSwapChain->GetContainingOutput(&mainOutput);
+	mSwapChain->GetFullscreenState(&bIsFullScreen, &mainOutput);
+
+	if (bIsFullScreen)
+	{
+		IDXGIOutput1* output1;
+		hr = mainOutput->QueryInterface(&output1);
+		if (FAILED(hr))
+			assert(false);
+
+		DXGI_SWAP_CHAIN_DESC dc;
+		mSwapChain->GetDesc(&dc);
+
+		uint num = 0;
+		output1->GetDisplayModeList1(dc.BufferDesc.Format, NULL, &num, NULL);
+
+		if (num != 0)
+		{
+			DXGI_MODE_DESC1* descs = new DXGI_MODE_DESC1[num];
+			output1->GetDisplayModeList1(dc.BufferDesc.Format, NULL, &num, descs);
+
+			for (int i = 0; i < num; ++i)
+			{
+				if (descs[i].Width >= mWndClientWidth && descs[i].Height >= mWndClientHeight)
+				{
+					mWndClientWidth = descs[i].Width;
+					mWndClientHeight = descs[i].Height;
+				}
+			}
+
+			delete[] descs;
+		}
+
+		output1->Release();
+		mainOutput->Release();
+	}
+	*/
 
 	mD3DDeviceContext->OMSetRenderTargets(0, NULL, NULL);
 
 	if (mRenderTargetView)
 		mRenderTargetView = nullptr;
 
-	mSwapChain->ResizeBuffers(2, mWndClientWidth, mWndClientHeight, DXGI_FORMAT_R8G8B8A8_UNORM, 0);
+	mSwapChain->ResizeBuffers(0, mWndClientWidth, mWndClientHeight, DXGI_FORMAT_UNKNOWN, 0);
 
-	HRESULT hr = CreateRenderTargetView();
+	hr = CreateAndApplyRenderTargetView(mD3DDevice.Get(), mD3DDeviceContext.Get(), mSwapChain.Get());
 	if (FAILED(hr))
 	{
 		PrintError("CreatRenderTargetView failed : {%x}\n", GetLastError());
 		assert(false);
 	}
+
+
+	// update viewport width, height
+	D3D11_VIEWPORT vp;
+	vp.Width = (FLOAT)mWndClientWidth;
+	vp.Height = (FLOAT)mWndClientHeight;
+	vp.TopLeftX = 0.0f;
+	vp.TopLeftY = 0.0f;
+	vp.MinDepth = 0.0f;
+	vp.MaxDepth = 1.0f;
+	mD3DDeviceContext->RSSetViewports(1, &vp);
+
+
+	// update view projection matrix's aspect ratio
+	mProjection = XMMatrixPerspectiveFovLH(XM_PIDIV2, mWndClientWidth / (FLOAT)mWndClientHeight, 0.1f, 100.0f);
 }
 
-HRESULT Graphics::CreateRenderTargetView()
+HRESULT Graphics::CreateAndApplyRenderTargetView(ID3D11Device* d3d11Device, ID3D11DeviceContext* d3d11DeviceContext, IDXGISwapChain* swapChain)
 {
 	HRESULT hr = S_OK;
 
-	ID3D11Buffer* backBuffer = nullptr;
-	hr = mSwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (LPVOID*)&backBuffer);
+	Microsoft::WRL::ComPtr<ID3D11Texture2D> backBuffer;
+	hr = swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (LPVOID*)backBuffer.GetAddressOf());
 	if (FAILED(hr))
 		return hr;
 
-	hr = mD3DDevice->CreateRenderTargetView(backBuffer, NULL, mRenderTargetView.GetAddressOf());
+	hr = d3d11Device->CreateRenderTargetView(backBuffer.Get(), NULL, mRenderTargetView.GetAddressOf());
 	if (FAILED(hr))
 		return hr;
+
+	// OM Stage의 RenderTarget으로 설정합니다.
+	d3d11DeviceContext->OMSetRenderTargets(1, mRenderTargetView.GetAddressOf(), NULL);
 
 	return hr;
 }

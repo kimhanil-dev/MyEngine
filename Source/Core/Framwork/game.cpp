@@ -13,8 +13,8 @@ void FrameWork::Init(HWND hWnd, HINSTANCE hInstance)
 	HRESULT hr = S_OK;
 
 	// Init renderers
-	mRenderers[(UINT)Renderer::DriectX] = GetRenderer(Renderer::DriectX);
-	mRenderers[(UINT)Renderer::Software] = GetRenderer(Renderer::Software);
+	mRenderers[(uint)Renderer::DriectX] = GetRenderer(Renderer::DriectX);
+	mRenderers[(uint)Renderer::Software] = GetRenderer(Renderer::Software);
 
 	for (auto& renderer : mRenderers)
 	{
@@ -37,7 +37,7 @@ void FrameWork::Init(HWND hWnd, HINSTANCE hInstance)
 	mInputManager->BindInput(VK_F2, InputManager::KeyState::Down, [this](unsigned int key, InputManager::KeyState state) {mCurState = mCurState == State::Pause ? State::Idle : State::Pause; });
 	mInputManager->BindInput(VK_F3, InputManager::KeyState::Down, [this](unsigned int key, InputManager::KeyState state) {mRenderType = mRenderType == Renderer::DriectX ? Renderer::Software : Renderer::DriectX; });
 	mInputManager->BindInput(VK_LEFT, InputManager::KeyState::Down, [moveable](unsigned int key, InputManager::KeyState state) {moveable->mOrigin.X -= 10.0f; });
-	mInputManager->BindInput_MousePos([](InputManager::MousePos pos) {Print("Mouse X{%d}:Y{%d}\n", pos.X, pos.Y); });
+	//mInputManager->BindInput_MousePos([](InputManager::MousePos pos) {Print("Mouse X{%d}:Y{%d}\n", pos.X, pos.Y); });
 
 	mCamera = new Object(0, 0.0f, 0.0f);
 	mObjects.push_back(moveable);
@@ -84,7 +84,7 @@ void FrameWork::Update()
 	static float refreshTime = 0.0f;
 	refreshTime += deltaSec;
 
-	mRenderers[(UINT)mRenderType]->Render();
+	mRenderers[(uint)mRenderType]->Render();
 
 	switch (mCurState)
 	{
@@ -134,8 +134,13 @@ void FrameWork::OnListen(const unsigned int& msg, const __int64& wParam, const _
 
 	if (msg == WM_SIZE)
 	{
+		uint width = LOWORD(lParam);
+		uint height = HIWORD(lParam);
+
+		Print("WM_SIZE Called : Width {%d} : Height {%d}\n", width, height);
+
 		//TODO : fix
-		if(mRenderers[(UINT)mRenderType] != nullptr)
-			mRenderers[(UINT)mRenderType]->ResizeWindow(LOWORD(lParam), HIWORD(lParam));
+		if(mRenderers[(uint)mRenderType] != nullptr)
+			mRenderers[(uint)mRenderType]->ResizeWindow(width,height);
 	}
 }
