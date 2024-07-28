@@ -9,9 +9,10 @@
 #include "Core/Framwork/Timer.h"
 
 Game::Game(HINSTANCE hAppInst)
-	:Application(hAppInst)
+	:Application(hAppInst),
+	mRenderers{ GetRenderer(Renderer::DriectX), GetRenderer(Renderer::Software) }
 {
-	
+
 }
 
 Game::~Game()
@@ -37,22 +38,21 @@ Game::~Game()
 
 void Game::OnResize()
 {
+	Application::OnResize();
+
 	for (IGraphics* renderer : mRenderers)
 	{
-		if (renderer != nullptr)
+		if (renderer->IsInited())
 			renderer->ResizeWindow(mClientWidth, mClientHeight);
 	}
 }
 
 bool Game::Init()
 {
-	Application::Init();
+	if (!Application::Init())
+		return false;
 
 	HRESULT hr = S_OK;
-
-	// Init renderers
-	mRenderers[(uint)Renderer::DriectX] = GetRenderer(Renderer::DriectX);
-	mRenderers[(uint)Renderer::Software] = GetRenderer(Renderer::Software);
 
 	for (auto& renderer : mRenderers)
 	{
@@ -62,6 +62,9 @@ bool Game::Init()
 			assert(false);
 		}
 	}
+
+	//
+	LoadGame();
 
 	for (auto object : mObjects)
 	{

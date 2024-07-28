@@ -22,7 +22,7 @@ public:
 	int			Run();
 
 	virtual bool Init();
-	virtual void OnResize() = 0;
+	virtual void OnResize();
 	virtual void DrawScene() = 0;
 	virtual LRESULT CALLBACK WndProc(HWND hWnd, uint msg, WPARAM wParam, LPARAM lParam);
 

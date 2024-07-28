@@ -49,7 +49,10 @@ private:
 
 	// Inherited via IGraphics
 	void SetCamera(Object* object) override;
-	virtual void AddObject(Object* object);
+	virtual void AddObject(Object* object) override;
+
+	bool bIsInited = false;
+	virtual bool IsInited() override;
 
 	// IGraphics을(를) 통해 상속됨
 	void ResizeWindow(uint width, uint height) override;

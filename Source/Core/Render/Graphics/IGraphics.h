@@ -14,4 +14,6 @@ public:
 	virtual void ResizeWindow(uint width, uint height) = 0;
 	virtual void AddObject(Object* object) = 0;
 	virtual void SetCamera(Object* object) = 0;
+
+	virtual bool IsInited() = 0;
 };

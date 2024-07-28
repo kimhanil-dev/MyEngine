@@ -39,5 +39,9 @@ private:
 
 	// IGraphics을(를) 통해 상속됨
 	void ResizeWindow(uint width, uint height) override;
+
+	// Inherited via IGraphics
+	bool bIsInited = false;
+	bool IsInited() override;
 };
 

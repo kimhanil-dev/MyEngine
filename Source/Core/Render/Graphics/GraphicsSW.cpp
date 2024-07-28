@@ -582,6 +582,8 @@ HRESULT GraphicsSW::Init(const HWND& hWnd)
 	mFrustomPlanes[2] = { upVector.Cross(FVector(sin(Radian(45.0f)),0.0f,cos(Radian(45.0f))))}; // right
 	mFrustomPlanes[3] = { FVector(sin(Radian(-45.0f)),0.0f,cos(Radian(-45.0f))).Cross(upVector) }; // left
 
+	bIsInited = true;
+
 	return S_OK;
 }
 
@@ -737,4 +739,9 @@ void GraphicsSW::SetCamera(Object* object)
 void GraphicsSW::ResizeWindow(uint width, uint height)
 {
 	// do
+}
+
+bool GraphicsSW::IsInited()
+{
+	return bIsInited;
 }

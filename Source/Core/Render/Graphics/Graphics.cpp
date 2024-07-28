@@ -270,6 +270,8 @@ HRESULT Graphics::Init(const HWND& hWnd)
 
 	DebugUI::Init(hWnd, mD3DDevice.Get(), mD3DDeviceContext.Get());
 
+	bIsInited = true;
+
 	return S_OK;
 }
 
@@ -312,6 +314,11 @@ void Graphics::SetCamera(Object* object)
 
 void Graphics::AddObject(Object* object)
 {
+}
+
+bool Graphics::IsInited()
+{
+	return bIsInited;
 }
 
 void Graphics::ResizeWindow(uint width, uint height)

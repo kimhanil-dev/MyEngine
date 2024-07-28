@@ -1,6 +1,9 @@
 #include "pch.h"
 #include "Application.h"
 
+#include <sstream>
+#include <format>
+
 #include "Core/Input/InputManager.h"
 #include "Core/Framwork/Timer.h"
 
@@ -18,7 +21,9 @@ public:
 
 
 Application::Application(HINSTANCE hInstance)
-	: mhAppInst(hInstance)
+	: mhAppInst(hInstance),
+	mTimer(make_unique<GameTimer>()),
+	mInputManager(make_unique<InputManager>())
 {
 }
 
@@ -45,13 +50,18 @@ bool Application::Init()
 {
 	InitMainWindow();
 
-	mTimer = make_unique<GameTimer>();
-	mInputManager = make_unique<InputManager>();
-
 	mTimer->Reset();
-	mTimer->Tick();
 
 	return true;
+}
+
+void Application::OnResize()
+{
+	RECT rc;
+	GetWindowRect(mhMainWnd, &rc);
+
+	mClientWidth = rc.right - rc.left;
+	mClientHeight = rc.bottom - rc.top;
 }
 
 int Application::Run()
@@ -68,20 +78,24 @@ int Application::Run()
 			TranslateMessage(&msg);
 			DispatchMessage(&msg);
 		}
-
-		switch (mCurrState)
+		else
 		{
-		case Application::State::Idle:
-		{
-			UpdateScene(mTimer->DeltaTime());
-			DrawScene();
-		}
-		break;
-		case Application::State::Pause:
-		{
-			Sleep(100);
-		}
-		break;
+			mTimer->Tick();
+			switch (mCurrState)
+			{
+			case Application::State::Idle:
+			{
+				CalculateFrameState();
+				UpdateScene(mTimer->DeltaTime());
+				DrawScene();
+			}
+			break;
+			case Application::State::Pause:
+			{
+				Sleep(100);
+			}
+			break;
+			}
 		}
 	}
 
@@ -108,13 +122,13 @@ static LRESULT CALLBACK _WndProc(HWND hWnd, uint msg, WPARAM wParam, LPARAM lPar
 		delete game;
 		game = reinterpret_cast<Application*>(createStruct->lpCreateParams);
 	}
-	break;
+	return 0;
 	case WM_CLOSE:
 		DestroyWindow(hWnd);
-		break;
+		return 0;
 	case WM_DESTROY:
 		PostQuitMessage(0);
-		break;
+		return 0;
 	default:
 		return DefWindowProc(hWnd, msg, wParam, lParam);
 	}
@@ -128,13 +142,27 @@ LRESULT Application::WndProc(HWND hWnd, uint msg, WPARAM wParam, LPARAM lParam)
 
 	switch (msg)
 	{
-	case WM_SIZE:
-	{
-		mClientWidth = LOWORD(lParam);
-		mClientHeight = HIWORD(lParam);
+	case WM_ACTIVATE:
+		if (LOWORD(wParam) == WA_INACTIVE)
+		{
+			mCurrState = State::Pause;
+			mTimer->Stop();
+		}
+		else
+		{
+			mCurrState = State::Idle;
+			mTimer->Start();
+		}
+		return 0;
+	case WM_ENTERSIZEMOVE:
+		mCurrState = State::Pause;
+		mTimer->Stop();
+		return 0;
+	case WM_EXITSIZEMOVE:
+		mCurrState = State::Idle;
+		mTimer->Start();
 		OnResize();
-	}
-	break;
+		return 0;
 	}
 
 	return 0;
@@ -174,4 +202,20 @@ bool Application::InitMainWindow()
 
 void Application::CalculateFrameState()
 {
+	static int frameCnt = 0;
+	static float timeElapsed = 0.0f;
+	++frameCnt;
+	if ((mTimer->TotalTime() - timeElapsed) >= 1.0f)
+	{
+		float fps = (float)frameCnt;
+		float mspf = 1000.0f / fps;
+		std::wostringstream outs;
+		outs.precision(6);
+		outs << std::format(L"{} FPS: {} Frame Time: {} (ms)", L"temp", fps, mspf);
+		SetWindowText(mhMainWnd, outs.str().c_str());
+
+		//Reset for next average.
+		frameCnt = 0;
+		timeElapsed += 1.0f;
+	}
 }
