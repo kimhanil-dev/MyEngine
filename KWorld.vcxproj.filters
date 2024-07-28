@@ -43,7 +43,7 @@
     <ClInclude Include="Source\Core\Types.h">
       <Filter>Game\FrameWork\Utill</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Core\Framwork\game.h">
+    <ClInclude Include="Source\Core\Framwork\Application.h">
       <Filter>Game\FrameWork</Filter>
     </ClInclude>
     <ClInclude Include="Source\Core\Object\Object.h">
@@ -86,12 +86,13 @@
     <ClInclude Include="Source\Core\Render\Graphics\GraphicsFactory.h" />
     <ClInclude Include="Resource\resource.h" />
     <ClInclude Include="Source\Core\Framwork\Timer.h" />
+    <ClInclude Include="Source\Game\Game.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Core\Math\Vector.cpp">
       <Filter>Game\FrameWork\Utill</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Core\Framwork\game.cpp">
+    <ClCompile Include="Source\Core\Framwork\Application.cpp">
       <Filter>Game\FrameWork</Filter>
     </ClCompile>
     <ClCompile Include="Source\Core\Object\Object.cpp">
@@ -122,6 +123,7 @@
     <ClCompile Include="Source\Core\Input\InputManager.cpp" />
     <ClCompile Include="Source\Core\Render\Graphics\GraphicsFactory.cpp" />
     <ClCompile Include="Source\Core\Framwork\Timer.cpp" />
+    <ClCompile Include="Source\Game\Game.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Resource\KWorld.rc">

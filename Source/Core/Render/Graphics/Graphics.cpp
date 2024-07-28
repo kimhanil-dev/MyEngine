@@ -6,6 +6,9 @@
 
 #include "UI/DebugUI.h"
 
+#define IF_FAILED_RETURN(func) hr = func; if(FAILED(hr)) return hr;
+#define IF_FAILED_LOG_AND_RETURN(hr) if(FAILED(hr)) {PrintError("hr failed : code {%x}", hr); return hr;} 
+
 struct SimpleVertex
 {
 	XMFLOAT3 Pos;
@@ -30,10 +33,10 @@ HRESULT Graphics::Init(const HWND& hWnd)
 	mWndClientWidth = rc.right - rc.left;
 	mWndClientHeight = rc.bottom - rc.top;
 
-	//*** create d3dDevice and swapchain
+	//*** create d3dDevice
 	uint createDeviceFlags = D3D11_CREATE_DEVICE_SINGLETHREADED;
 #if defined( _DEBUG ) | defined( DEBUG )
-	//createDeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
+	createDeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
 #endif
 
 	int* test = nullptr;
@@ -46,6 +49,25 @@ HRESULT Graphics::Init(const HWND& hWnd)
 	};
 	uint numFeatureLevels = ARRAYSIZE(featureLevels);
 
+	D3D_FEATURE_LEVEL featureLevel = D3D_FEATURE_LEVEL_11_0;
+
+	//
+	hr = D3D11CreateDevice(NULL,
+		D3D_DRIVER_TYPE_HARDWARE,
+		NULL,
+		createDeviceFlags,
+		NULL, 0,
+		D3D11_SDK_VERSION,
+		mD3DDevice.GetAddressOf(),
+		&featureLevel,
+		mD3DDeviceContext.GetAddressOf());
+	if(FAILED(hr))
+	{
+		MessageBox(mhWnd, L"D3D11CreateDevice failed", 0, 0);
+		return  hr;
+	}
+
+	//*** create swap chain
 	DXGI_SWAP_CHAIN_DESC sd;
 	ZeroMemory(&sd, sizeof(sd));
 	sd.BufferCount = 1;
@@ -56,26 +78,36 @@ HRESULT Graphics::Init(const HWND& hWnd)
 	sd.BufferDesc.RefreshRate.Denominator = 1;
 	sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
 	sd.OutputWindow = hWnd;
-	sd.SampleDesc.Count = 1;
-	sd.SampleDesc.Quality = 0;
+	if (mbEnable4xMsaa)
+	{
+		sd.SampleDesc.Count = 4;
+		m4xMsaaQuality =  CheckMultisampleQualityLevels(sd.BufferDesc.Format, sd.SampleDesc.Count);
+		sd.SampleDesc.Quality = m4xMsaaQuality - 1;
+	}
+	else
+	{
+		sd.SampleDesc.Count = 1;
+		sd.SampleDesc.Quality = 0;
+	}
+	sd.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
 	sd.Windowed = true;
 
-	D3D_FEATURE_LEVEL featureLevel = D3D_FEATURE_LEVEL_11_0;
+	Microsoft::WRL::ComPtr<IDXGIDevice>		dxgiDevice;
+	Microsoft::WRL::ComPtr<IDXGIAdapter>	dxgiAdapter;
+	Microsoft::WRL::ComPtr<IDXGIFactory>	dxgiFactory;
 
-	hr = D3D11CreateDeviceAndSwapChain(NULL, D3D_DRIVER_TYPE_HARDWARE, NULL, createDeviceFlags, featureLevels, numFeatureLevels,
-		D3D11_SDK_VERSION, &sd, mSwapChain.GetAddressOf(), mD3DDevice.GetAddressOf(), &featureLevel, mD3DDeviceContext.GetAddressOf());
-	if (FAILED(hr))
-		return hr;
+	IF_FAILED_RETURN(mD3DDevice->QueryInterface(__uuidof(IDXGIDevice),	(LPVOID*)dxgiDevice.GetAddressOf()));
+	IF_FAILED_RETURN(dxgiDevice->GetParent(__uuidof(IDXGIAdapter),		(LPVOID*)dxgiAdapter.GetAddressOf()));
+	IF_FAILED_RETURN(dxgiAdapter->GetParent(__uuidof(IDXGIFactory),		(LPVOID*)dxgiFactory.GetAddressOf()));
 
-	hr = CreateAndApplyRenderTargetView(
-		mD3DDevice.Get(),
-		mD3DDeviceContext.Get(),
-		mSwapChain.Get());
-	if (FAILED(hr))
-	{
-		PrintError("CreatRenderTargetView failed : {%x}\n", GetLastError());
-		return hr;
-	}
+	IF_FAILED_RETURN(dxgiFactory->CreateSwapChain(mD3DDevice.Get(), &sd, mSwapChain.GetAddressOf()));
+
+	//*** create render target and depth stenil
+	IF_FAILED_RETURN(CreateRenderTargetView());
+	IF_FAILED_RETURN(CreateDepthStencilView());
+
+	//*** set render target and depth stencil to om
+	mD3DDeviceContext->OMSetRenderTargets(1,mRenderTargetView.GetAddressOf(), mDepthStencilView.Get());
 
 	//*** set view port
 	D3D11_VIEWPORT vp;
@@ -86,7 +118,6 @@ HRESULT Graphics::Init(const HWND& hWnd)
 	vp.TopLeftX = 0;
 	vp.TopLeftY = 0;
 	mD3DDeviceContext->RSSetViewports(1, &vp);
-
 
 	//*** compile shader
 	Microsoft::WRL::ComPtr<ID3DBlob> errorMsg = nullptr;
@@ -338,18 +369,24 @@ void Graphics::ResizeWindow(uint width, uint height)
 	*/
 
 	mD3DDeviceContext->OMSetRenderTargets(0, NULL, NULL);
-
-	if (mRenderTargetView)
-		mRenderTargetView = nullptr;
-
-	mSwapChain->ResizeBuffers(0, mWndClientWidth, mWndClientHeight, DXGI_FORMAT_UNKNOWN, 0);
-
-	hr = CreateAndApplyRenderTargetView(mD3DDevice.Get(), mD3DDeviceContext.Get(), mSwapChain.Get());
-	if (FAILED(hr))
 	{
-		PrintError("CreatRenderTargetView failed : {%x}\n", GetLastError());
-		assert(false);
+		mSwapChain->ResizeBuffers(0, mWndClientWidth, mWndClientHeight, DXGI_FORMAT_UNKNOWN, 0);
+
+		hr = CreateRenderTargetView();
+		if (FAILED(hr))
+		{
+			MessageBox(mhWnd, L"CreateRenderTargetView failed", 0, 0);
+			return;
+		}
+
+		hr = CreateDepthStencilView();
+		if (FAILED(hr))
+		{
+			MessageBox(mhWnd, L"CreateDepthStencilView failed", 0, 0);
+			return;
+		}
 	}
+	mD3DDeviceContext->OMSetRenderTargets(1,mRenderTargetView.GetAddressOf(), mDepthStencilView.Get());
 
 
 	// update viewport width, height
@@ -362,26 +399,76 @@ void Graphics::ResizeWindow(uint width, uint height)
 	vp.MaxDepth = 1.0f;
 	mD3DDeviceContext->RSSetViewports(1, &vp);
 
-
 	// update view projection matrix's aspect ratio
 	mProjection = XMMatrixPerspectiveFovLH(XM_PIDIV2, mWndClientWidth / (FLOAT)mWndClientHeight, 0.1f, 100.0f);
 }
 
-HRESULT Graphics::CreateAndApplyRenderTargetView(ID3D11Device* d3d11Device, ID3D11DeviceContext* d3d11DeviceContext, IDXGISwapChain* swapChain)
+HRESULT Graphics::CreateRenderTargetView()
 {
+	assert(mD3DDevice != nullptr);
+	assert(mSwapChain != nullptr);
+
 	HRESULT hr = S_OK;
 
+	if (mRenderTargetView)
+	{
+		mRenderTargetView = nullptr;
+	}
+
 	Microsoft::WRL::ComPtr<ID3D11Texture2D> backBuffer;
-	hr = swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (LPVOID*)backBuffer.GetAddressOf());
-	if (FAILED(hr))
+	hr = mSwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (LPVOID*)backBuffer.GetAddressOf());
+	if(FAILED(hr))
 		return hr;
 
-	hr = d3d11Device->CreateRenderTargetView(backBuffer.Get(), NULL, mRenderTargetView.GetAddressOf());
-	if (FAILED(hr))
+	hr = mD3DDevice->CreateRenderTargetView(backBuffer.Get(), NULL, mRenderTargetView.GetAddressOf());
+	if(FAILED(hr))
 		return hr;
 
-	// OM Stage의 RenderTarget으로 설정합니다.
-	d3d11DeviceContext->OMSetRenderTargets(1, mRenderTargetView.GetAddressOf(), NULL);
+	return hr;
+}
+
+uint Graphics::CheckMultisampleQualityLevels(const DXGI_FORMAT format, const uint sampleCount)
+{
+	assert(mD3DDevice != nullptr);
+
+	uint result = 0;
+	mD3DDevice->CheckMultisampleQualityLevels(format, sampleCount, &result);
+
+	return result;
+}
+
+HRESULT Graphics::CreateDepthStencilView()
+{
+	assert(mD3DDevice != nullptr);
+	assert(mSwapChain != nullptr);
+
+	HRESULT hr = S_OK;
+
+	if (mDepthStencilView)
+	{
+		mDepthStencilTexture = nullptr;
+		mDepthStencilView = nullptr;
+	}
+
+	DXGI_SWAP_CHAIN_DESC swapChainDesc;
+	mSwapChain->GetDesc(&swapChainDesc);
+
+	D3D11_TEXTURE2D_DESC depthStencilDesc = {};
+	depthStencilDesc.Width = mWndClientWidth;
+	depthStencilDesc.Height = mWndClientHeight;
+	depthStencilDesc.MipLevels = 1;
+	depthStencilDesc.ArraySize = 1;
+	depthStencilDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+	depthStencilDesc.SampleDesc = swapChainDesc.SampleDesc;
+	depthStencilDesc.Usage = D3D11_USAGE_DEFAULT;
+	depthStencilDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+	depthStencilDesc.CPUAccessFlags = 0;
+	depthStencilDesc.MiscFlags = 0;
+
+	hr = mD3DDevice->CreateTexture2D(&depthStencilDesc, 0, mDepthStencilTexture.GetAddressOf());
+	IF_FAILED_LOG_AND_RETURN(hr);
+	hr = mD3DDevice->CreateDepthStencilView(mDepthStencilTexture.Get(), 0, mDepthStencilView.GetAddressOf());
+	IF_FAILED_LOG_AND_RETURN(hr);
 
 	return hr;
 }

@@ -15,6 +15,9 @@ class InputManager : public IWinMsgListener
 {
 //----- Button
 public:
+	InputManager() = default;
+	virtual ~InputManager() = default;
+
 	enum class KeyState : unsigned int
 	{
 		Idle,	// 바인딩에서 사용하지 않습니다. (내부 전용)

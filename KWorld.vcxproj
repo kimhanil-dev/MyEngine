@@ -118,9 +118,9 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>.\lib;$(DXSDK_DIR)/Lib/x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <IgnoreSpecificDefaultLibraries>LIBMCT;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
-      <AdditionalDependencies>wininet.lib;libfbxsdk.lib;d3d11.lib;dxgi.lib;dxguid.lib;d3dcompiler.lib;dinput8.lib;winmm.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>wininet.lib;libfbxsdk.lib;d3d11.lib;dxgi.lib;dxguid.lib;dinput8.lib;winmm.lib;D3DCompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>./lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -147,6 +147,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="Source\Game\Game.h" />
     <ClInclude Include="Resource\resource.h" />
     <ClInclude Include="Source\Core\Framwork\Timer.h" />
     <ClInclude Include="Source\Core\Input\InputManager.h" />
@@ -168,7 +169,7 @@
     <ClInclude Include="Source\Core\Math\Plane.h" />
     <ClInclude Include="Source\Utill\console.h" />
     <ClInclude Include="Source\Utill\fbx.h" />
-    <ClInclude Include="Source\Core\Framwork\game.h" />
+    <ClInclude Include="Source\Core\Framwork\Application.h" />
     <ClInclude Include="Source\Core\Object\Object.h" />
     <ClInclude Include="Source\Core\Types.h" />
     <ClInclude Include="Source\Utill\frame.h" />
@@ -181,6 +182,7 @@
     <ClInclude Include="pch.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Source\Game\Game.cpp" />
     <ClCompile Include="Source\Core\Framwork\Timer.cpp" />
     <ClCompile Include="Source\Core\Input\InputManager.cpp" />
     <ClCompile Include="Source\Core\Render\Graphics\GraphicsFactory.cpp" />
@@ -226,7 +228,7 @@
     <ClCompile Include="Source\Core\Render\Graphics\GraphicsSW.cpp" />
     <ClCompile Include="Source\Core\Render\Graphics\Graphics.cpp" />
     <ClCompile Include="Source\Utill\fbx.cpp" />
-    <ClCompile Include="Source\Core\Framwork\game.cpp" />
+    <ClCompile Include="Source\Core\Framwork\Application.cpp" />
     <ClCompile Include="Source\Utill\frame.cpp" />
     <ClCompile Include="Source\Window\KWorld.cpp" />
     <ClCompile Include="Source\Core\Object\Object.cpp" />

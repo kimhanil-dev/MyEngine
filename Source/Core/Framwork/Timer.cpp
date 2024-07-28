@@ -14,9 +14,12 @@ float GameTimer::TotalTime() const
 {
 	if (mbStopped)
 	{
-		return (float)(((mStopTime - mPausedTime)))
+		return (float)(((mStopTime - mPausedTime) - mBaseTime) * mSecondsPerCount);
 	}
-	return 0.0f;
+	else
+	{
+		return (float)(((mCurrTime - mPausedTime) - mBaseTime) * mSecondsPerCount);
+	}
 }
 
 float GameTimer::GameTime() const

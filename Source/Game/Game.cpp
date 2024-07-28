@@ -1,20 +1,54 @@
 #include "pch.h"
-#include "game.h"
+#include "Game.h"
 
-#include "Core/Framwork/Timer.h"
 #include "Utill/console.h"
 #include "Utill/fbx.h"
 #include "Core/Object/Object.h"
 #include "Core/Render/Graphics/IGraphics.h"
+#include "Core/Input/InputManager.h"
+#include "Core/Framwork/Timer.h"
 
-void FrameWork::Init(HWND hWnd, HINSTANCE hInstance)
+Game::Game(HINSTANCE hAppInst)
+	:Application(hAppInst)
 {
+	
+}
+
+Game::~Game()
+{
+	if (mCamera != nullptr)
+	{
+		delete mCamera;
+		mCamera = nullptr;
+	}
+
+	for (int i = 0; i < mObjects.size(); ++i)
+	{
+		delete mObjects[i];
+	}
+
+	fbx::Release();
+
+	mObjects.clear();
+
+	for (auto& renderer : mRenderers)
+		renderer->Release();
+}
+
+void Game::OnResize()
+{
+	for (IGraphics* renderer : mRenderers)
+	{
+		if (renderer != nullptr)
+			renderer->ResizeWindow(mClientWidth, mClientHeight);
+	}
+}
+
+bool Game::Init()
+{
+	Application::Init();
+
 	HRESULT hr = S_OK;
-
-	assert(hWnd);
-	assert(hInstance);
-
-	mhWnd = hWnd;
 
 	// Init renderers
 	mRenderers[(uint)Renderer::DriectX] = GetRenderer(Renderer::DriectX);
@@ -22,17 +56,12 @@ void FrameWork::Init(HWND hWnd, HINSTANCE hInstance)
 
 	for (auto& renderer : mRenderers)
 	{
-		if (FAILED(hr = renderer->Init(mhWnd)))
+		if (FAILED(hr = renderer->Init(mhMainWnd)))
 		{
 			PrintError("Renderer init failed : %x\n", hr);
 			assert(false);
 		}
 	}
-
-	// set timer
-	mTimer = make_shared<GameTimer>();
-
-	LoadResources();
 
 	for (auto object : mObjects)
 	{
@@ -47,45 +76,16 @@ void FrameWork::Init(HWND hWnd, HINSTANCE hInstance)
 	{
 		renderer->SetCamera(mCamera);
 	}
+
+	return true;
 }
 
-int FrameWork::Run()
+void Game::DrawScene()
 {
-	mTimer->Tick();
-	MSG msg;
-	ZeroMemory(&msg, sizeof(MSG));
-
-	// WinLoop
-	while (msg.message != WM_QUIT)
-	{
-		if (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))
-		{
-			TranslateMessage(&msg);
-			DispatchMessage(&msg);
-		}
-
-		switch (mCurrState)
-		{
-		case FrameWork::State::Idle:
-		{
-			UpdateScene(mTimer->DeltaTime());
-			DrawScene();
-		}
-		break;
-		case FrameWork::State::Pause:
-		{
-			Sleep(100);
-		}
-		break;
-		}
-	}
-
-	Release();
-
-	return (int)msg.wParam;
+	mRenderers[(uint)mRenderType]->Render();
 }
 
-void FrameWork::UpdateScene(float deltaTime)
+void Game::UpdateScene(float deltaTime)
 {
 	constexpr float rotateSpeed = 50.0f;
 	for (int i = 0; i < mObjects.size(); ++i)
@@ -94,17 +94,14 @@ void FrameWork::UpdateScene(float deltaTime)
 	}
 }
 
-void FrameWork::LoadResources()
+void Game::LoadGame()
 {
 	fbx::LoadFBX("./Resource/fbx/Box.fbx", 0);
 	fbx::LoadFBX("./Resource/fbx/dragon.fbx", 1);
 
 	Object* moveable = new Object(0, FVector(0.0f, 0.0f, 300.0f), 0.0f, fbx::GetMesh(1));
 
-	// init input manager
-	if (mInputManager == nullptr)
-		mInputManager = make_unique<InputManager>();
-	mInputManager->BindInput(VK_F1, InputManager::KeyState::Down, [this](unsigned int key, InputManager::KeyState state) {mCurrState = State::Destroy, SendMessage(mhWnd, WM_CLOSE, NULL, NULL); });
+	mInputManager->BindInput(VK_F1, InputManager::KeyState::Down, [this](unsigned int key, InputManager::KeyState state) {mCurrState = State::Destroy, SendMessage(mhMainWnd, WM_CLOSE, NULL, NULL); });
 	mInputManager->BindInput(VK_F2, InputManager::KeyState::Down, [this](unsigned int key, InputManager::KeyState state) {mCurrState = mCurrState == State::Pause ? State::Idle : State::Pause; });
 	mInputManager->BindInput(VK_F3, InputManager::KeyState::Down, [this](unsigned int key, InputManager::KeyState state) {mRenderType = mRenderType == Renderer::DriectX ? Renderer::Software : Renderer::DriectX; });
 	mInputManager->BindInput(VK_LEFT, InputManager::KeyState::Down, [moveable](unsigned int key, InputManager::KeyState state) {moveable->mOrigin.X -= 10.0f; });
@@ -129,51 +126,4 @@ void FrameWork::LoadResources()
 		{FVector(-50.0f,-50.0f,0.0f), FVector(0.0f)},
 		{FVector(0.0f,50.0f,0.0f), FVector(0.0f)},
 		}));
-}
-
-void FrameWork::DrawScene()
-{
-	mRenderers[(uint)mRenderType]->Render();
-}
-
-void FrameWork::Release()
-{
-	if (mCamera != nullptr)
-	{
-		delete mCamera;
-		mCamera = nullptr;
-	}
-
-	for (int i = 0; i < mObjects.size(); ++i)
-	{
-		delete mObjects[i];
-	}
-
-	fbx::Release();
-
-	mObjects.clear();
-
-	for (auto& renderer : mRenderers)
-		renderer->Release();
-}
-
-void FrameWork::OnListen(const unsigned int& msg, const __int64& wParam, const __int64& lParam)
-{
-	if (mInputManager != nullptr)
-		static_cast<IWinMsgListener*>(mInputManager.get())->OnListen(msg, wParam, lParam);
-
-	switch (msg)
-	{
-	case WM_SIZE:
-	{
-		uint width = LOWORD(lParam);
-		uint height = HIWORD(lParam);
-
-		if (mRenderers[(uint)mRenderType] != nullptr)
-			mRenderers[(uint)mRenderType]->ResizeWindow(width, height);
-	}
-	break;
-	default:
-		break;
-	}
 }
