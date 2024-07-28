@@ -8,11 +8,13 @@
 
 #define MAX_LOADSTRING 100
 
+//game instance
+FrameWork gGame;
+
 // Global Variables:
 HINSTANCE hInst;                                // current instance
 WCHAR szTitle[MAX_LOADSTRING];                  // The title bar text
 WCHAR szWindowClass[MAX_LOADSTRING];            // the main window class name
-FrameWork gGame;
 
 // Forward declarations of functions included in this code module:
 ATOM                MyRegisterClass(HINSTANCE hInstance);
@@ -28,8 +30,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	UNREFERENCED_PARAMETER(hPrevInstance);
 	UNREFERENCED_PARAMETER(lpCmdLine);
 
-	// TODO: Place code here.
-
 	// Initialize global strings
 	LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
 	LoadStringW(hInstance, IDC_KWORLD, szWindowClass, MAX_LOADSTRING);
@@ -43,26 +43,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	}
 
 	gGame.Init(hWnd, hInstance);
-	{
-		MSG msg;
-		ZeroMemory(&msg, sizeof(MSG));
-
-		// WinLoop
-		while (msg.message != WM_QUIT)
-		{
-			if (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))
-			{
-				//TranslateMessage(&msg);
-				DispatchMessage(&msg);
-			}
-
-			gGame.Update();
-		}
-
-		gGame.Release();
-
-		return (int)msg.wParam;
-	}
+	return gGame.Run();
 }
 
 
@@ -93,16 +74,6 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
 	return RegisterClassExW(&wcex);
 }
 
-//
-//   FUNCTION: InitInstance(HINSTANCE, int)
-//
-//   PURPOSE: Saves instance handle and creates main window
-//
-//   COMMENTS:
-//
-//        In this function, we save the instance handle in a global variable and
-//        create and display the main program window.
-//
 HWND InitInstance(HINSTANCE hInstance, int nCmdShow)
 {
 	hInst = hInstance; // Store instance handle in our global variable
@@ -121,16 +92,6 @@ HWND InitInstance(HINSTANCE hInstance, int nCmdShow)
 	return hWnd;
 }
 
-//
-//  FUNCTION: WndProc(HWND, uint, WPARAM, LPARAM)
-//
-//  PURPOSE: Processes messages for the main window.
-//
-//  WM_COMMAND  - process the application menu
-//  WM_PAINT    - Paint the main window
-//  WM_DESTROY  - post a quit message and return
-//
-//
 IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, uint msg, WPARAM wParam, LPARAM lParam);
 LRESULT CALLBACK WndProc(HWND hWnd, uint message, WPARAM wParam, LPARAM lParam)
 {

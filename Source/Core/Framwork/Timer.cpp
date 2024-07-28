@@ -2,85 +2,91 @@
 #include "Timer.h"
 
 GameTimer::GameTimer()
+	: mSecondsPerCount(0.0), mDeltaTime(-1.0f), mBaseTime(0),
+	mPausedTime(0), mStopTime(0), mPrevTime(0), mCurrTime(0), mbStopped(false)
 {
-	// 성능 카운터의 초당 개수(Frequency)를 받아오는 함수
-	if (QueryPerformanceFrequency((LARGE_INTEGER*)&mPerformanceFrequency))
-	{
-		mbHardwareHasPerformanceCounter = true;
-		// 성능 카운터의 현재 값을 반환함
-		QueryPerformanceCounter((LARGE_INTEGER*)&mLastTime); // 
-		mTimeScale = 1.0f / mPerformanceFrequency;
-	}
-	else
-	{
-		mbHardwareHasPerformanceCounter = false;
-		mLastTime = ::timeGetTime();
-		mTimeScale = 0.001f;
-	}
+	int64 countsPerSec;
+	QueryPerformanceFrequency((LARGE_INTEGER*)&countsPerSec);
+	mSecondsPerCount = 1.0 / (double)countsPerSec;
 }
 
-void GameTimer::Tick(float lockFPS)
+float GameTimer::TotalTime() const
 {
-	if (mbHardwareHasPerformanceCounter)
+	if (mbStopped)
 	{
-		QueryPerformanceCounter((LARGE_INTEGER*)mCurrentTime);
+		return (float)(((mStopTime - mPausedTime)))
 	}
-	else
-	{
-		mCurrentTime = ::timeGetTime();
-	}
-
-	float timeElapsed = (mCurrentTime - mLastTime) * mTimeScale;
-	if (lockFPS > 0.0f)
-	{
-		while (timeElapsed < (1.0f / lockFPS))
-		{
-			if (mbHardwareHasPerformanceCounter)
-			{
-				QueryPerformanceCounter((LARGE_INTEGER*)mCurrentTime);
-			}
-			else
-			{
-				mCurrentTime = ::timeGetTime();
-			}
-			
-			timeElapsed = (mCurrentTime - mLastTime) * mTimeScale;
-		}
-	}
-
-	mLastTime = mCurrentTime;
-	if (fabsf(timeElapsed - mTimeElapsed) < 1.0f)
-	{
-		// 현재 프레임 처리 시간 저장
-		memmove(&mFrameTime[1], mFrameTime, (MAX_SAMPLE_COUNT - 1) * sizeof(float));
-		mFrameTime[0] = timeElapsed;
-		if (mSampleCount < MAX_SAMPLE_COUNT) ++mSampleCount;
-	}
-
-	++mFramePerSecond;
-	// 현재 프레임 처리 시간을 누적하여 저장
-	mFPSTimeElapsed += timeElapsed;
-	if (mFPSTimeElapsed > 1.0f)
-	{
-		mCurrentFrameRate = mFramePerSecond;
-		mFramePerSecond = 0;
-		mFPSTimeElapsed -= 1.0f;
-	}
-
-	mTimeElapsed = 0.0f;
-	for (uint32 i = 0; i < mSampleCount; ++i)
-		mTimeElapsed += mFrameTime[i];
-
-	if (mSampleCount > 0)
-		mTimeElapsed /= mSampleCount;
+	return 0.0f;
 }
 
-uint32 GameTimer::GetFrameRate()
-{
-	return uint32();
-}
-
-float GameTimer::GetTimeElapsed()
+float GameTimer::GameTime() const
 {
 	return 0.0f;
+}
+
+float GameTimer::DeltaTime() const
+{
+	return (float)mDeltaTime;
+}
+
+void GameTimer::Reset()
+{
+	int64 currTime;
+	QueryPerformanceCounter((LARGE_INTEGER*)&currTime);
+	mBaseTime = currTime;
+	mPrevTime = currTime;
+	mStopTime  = 0;
+	mbStopped = false;
+}
+
+
+void GameTimer::Stop()
+{
+	if (!mbStopped)
+	{
+		int64 currTime;
+		QueryPerformanceCounter((LARGE_INTEGER*)&currTime);
+		mStopTime = currTime;
+		mbStopped = true;
+	}
+}
+
+void GameTimer::Start()
+{
+	int64 startTime;
+	QueryPerformanceCounter((LARGE_INTEGER*)&startTime);
+	
+	if (mbStopped)
+	{
+		mPausedTime += (startTime - mStopTime);
+		mPrevTime = startTime;
+		mStopTime =  0;
+		mbStopped = false;
+	}
+
+}
+
+void GameTimer::Tick()
+{
+	if (mbStopped)
+	{
+		mDeltaTime = 0.0f;
+		return;
+	}
+
+	int64 currTime;
+	QueryPerformanceCounter((LARGE_INTEGER*)&currTime);
+	mCurrTime = currTime;
+
+	mDeltaTime = (mCurrTime - mPrevTime) * mSecondsPerCount;
+
+	mPrevTime = mCurrTime;
+
+	// Forece nonnegative. The DXSDK's CDXUTTimer mentions that if the
+	// processor goes into a power save mode or we get shuffeld to another processer,
+	// then mDeltaTime can be negative
+	if (mDeltaTime < 0.0)
+	{
+		mDeltaTime = 0.0;
+	}
 }
