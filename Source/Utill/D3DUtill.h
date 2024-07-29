@@ -13,8 +13,8 @@
 			LPWSTR output; \
 			FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_IGNORE_INSERTS, NULL, hr, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPTSTR)&output, 0, NULL); \
 			std::wostringstream outs;\
-			outs << std::format(L"{} {} {} {}", TEXT(__FILE__), (DWORD)__LINE__, L#x, output);\
-			MessageBox(NULL, output, TEXT("ERROR"), MB_OK);\
+			outs << std::format(L"File: {}\nLine: {}\nFunc: {}\nError Msg: {}", TEXT(__FILE__), (DWORD)__LINE__, L#x, output);\
+			MessageBox(NULL, outs.str().c_str(), TEXT("ERROR"), MB_OK);\
 		}\
 	}
 	#endif
