@@ -74,7 +74,7 @@ HRESULT Graphics::Init(const HWND& hWnd)
 	sd.OutputWindow = hWnd;
 	if (mbEnable4xMsaa)
 	{
-		sd.SampleDesc.Count = 4;
+		sd.SampleDesc.Count = 43;
 		m4xMsaaQuality =  CheckMultisampleQualityLevels(sd.BufferDesc.Format, sd.SampleDesc.Count);
 		sd.SampleDesc.Quality = m4xMsaaQuality - 1;
 	}
