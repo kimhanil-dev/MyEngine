@@ -29,7 +29,7 @@ private:
 	uint m4xMsaaQuality = 0;
 
 	Microsoft::WRL::ComPtr<ID3D11Device>			mD3DDevice;
-	Microsoft::WRL::ComPtr<ID3D11DeviceContext>		mD3DDeviceContext;
+	Microsoft::WRL::ComPtr<ID3D11DeviceContext>		mD3DImmediateContext;
 	Microsoft::WRL::ComPtr<IDXGISwapChain>			mSwapChain;
 	Microsoft::WRL::ComPtr<ID3D11RenderTargetView>	mRenderTargetView;
 	Microsoft::WRL::ComPtr<ID3D11DepthStencilView>	mDepthStencilView;

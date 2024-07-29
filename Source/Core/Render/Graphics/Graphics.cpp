@@ -3,11 +3,9 @@
 
 #include "Utill/console.h"
 #include "Utill/frame.h"
-
+#include "Utill/D3DUtill.h"
 #include "UI/DebugUI.h"
 
-#define IF_FAILED_RETURN(func) hr = func; if(FAILED(hr)) return hr;
-#define IF_FAILED_LOG_AND_RETURN(hr) if(FAILED(hr)) {PrintError("hr failed : code {%x}", hr); return hr;} 
 
 struct SimpleVertex
 {
@@ -52,7 +50,7 @@ HRESULT Graphics::Init(const HWND& hWnd)
 	D3D_FEATURE_LEVEL featureLevel = D3D_FEATURE_LEVEL_11_0;
 
 	//
-	hr = D3D11CreateDevice(NULL,
+	HR(D3D11CreateDevice(NULL,
 		D3D_DRIVER_TYPE_HARDWARE,
 		NULL,
 		createDeviceFlags,
@@ -60,12 +58,8 @@ HRESULT Graphics::Init(const HWND& hWnd)
 		D3D11_SDK_VERSION,
 		mD3DDevice.GetAddressOf(),
 		&featureLevel,
-		mD3DDeviceContext.GetAddressOf());
-	if(FAILED(hr))
-	{
-		MessageBox(mhWnd, L"D3D11CreateDevice failed", 0, 0);
-		return  hr;
-	}
+		mD3DImmediateContext.GetAddressOf()));
+	
 
 	//*** create swap chain
 	DXGI_SWAP_CHAIN_DESC sd;
@@ -96,18 +90,18 @@ HRESULT Graphics::Init(const HWND& hWnd)
 	Microsoft::WRL::ComPtr<IDXGIAdapter>	dxgiAdapter;
 	Microsoft::WRL::ComPtr<IDXGIFactory>	dxgiFactory;
 
-	IF_FAILED_RETURN(mD3DDevice->QueryInterface(__uuidof(IDXGIDevice),	(LPVOID*)dxgiDevice.GetAddressOf()));
-	IF_FAILED_RETURN(dxgiDevice->GetParent(__uuidof(IDXGIAdapter),		(LPVOID*)dxgiAdapter.GetAddressOf()));
-	IF_FAILED_RETURN(dxgiAdapter->GetParent(__uuidof(IDXGIFactory),		(LPVOID*)dxgiFactory.GetAddressOf()));
+	HR(mD3DDevice->QueryInterface(__uuidof(IDXGIDevice),	(LPVOID*)dxgiDevice.GetAddressOf()));
+	HR(dxgiDevice->GetParent(__uuidof(IDXGIAdapter),		(LPVOID*)dxgiAdapter.GetAddressOf()));
+	HR(dxgiAdapter->GetParent(__uuidof(IDXGIFactory),		(LPVOID*)dxgiFactory.GetAddressOf()));
 
-	IF_FAILED_RETURN(dxgiFactory->CreateSwapChain(mD3DDevice.Get(), &sd, mSwapChain.GetAddressOf()));
+	HR(dxgiFactory->CreateSwapChain(mD3DDevice.Get(), &sd, mSwapChain.GetAddressOf()));
 
 	//*** create render target and depth stenil
-	IF_FAILED_RETURN(CreateRenderTargetView());
-	IF_FAILED_RETURN(CreateDepthStencilView());
+	HR(CreateRenderTargetView());
+	HR(CreateDepthStencilView());
 
 	//*** set render target and depth stencil to om
-	mD3DDeviceContext->OMSetRenderTargets(1,mRenderTargetView.GetAddressOf(), mDepthStencilView.Get());
+	mD3DImmediateContext->OMSetRenderTargets(1,mRenderTargetView.GetAddressOf(), mDepthStencilView.Get());
 
 	//*** set view port
 	D3D11_VIEWPORT vp;
@@ -117,7 +111,7 @@ HRESULT Graphics::Init(const HWND& hWnd)
 	vp.MaxDepth = 1.0f;
 	vp.TopLeftX = 0;
 	vp.TopLeftY = 0;
-	mD3DDeviceContext->RSSetViewports(1, &vp);
+	mD3DImmediateContext->RSSetViewports(1, &vp);
 
 	//*** compile shader
 	Microsoft::WRL::ComPtr<ID3DBlob> errorMsg = nullptr;
@@ -154,7 +148,7 @@ HRESULT Graphics::Init(const HWND& hWnd)
 	if (FAILED(hr))
 		return hr;
 
-	mD3DDeviceContext->IASetInputLayout(mInputLayout.Get());
+	mD3DImmediateContext->IASetInputLayout(mInputLayout.Get());
 
 	Microsoft::WRL::ComPtr<ID3DBlob> psBlob = nullptr;
 	hr = D3DCompileFromFile(L"Shader/SimplePS.fx", NULL, NULL, "PS", "ps_4_0",
@@ -168,11 +162,7 @@ HRESULT Graphics::Init(const HWND& hWnd)
 		return hr;
 	}
 
-	hr = mD3DDevice->CreatePixelShader(psBlob->GetBufferPointer(), psBlob->GetBufferSize(), NULL, mPixelShader.GetAddressOf());
-	if (FAILED(hr))
-	{
-		return hr;
-	}
+	HR(mD3DDevice->CreatePixelShader(psBlob->GetBufferPointer(), psBlob->GetBufferSize(), NULL, mPixelShader.GetAddressOf()));
 
 	//*** create vertex buffer
 	SimpleVertex vertices[] =
@@ -200,13 +190,11 @@ HRESULT Graphics::Init(const HWND& hWnd)
 	ZeroMemory(&initData, sizeof(initData));
 	initData.pSysMem = vertices;
 
-	hr = mD3DDevice->CreateBuffer(&bd, &initData, mVertexBuffer.GetAddressOf());
-	if (FAILED(hr))
-		return hr;
+	HR(mD3DDevice->CreateBuffer(&bd, &initData, mVertexBuffer.GetAddressOf()));
 
 	uint stride = sizeof(SimpleVertex);
 	uint offset = 0;
-	mD3DDeviceContext->IASetVertexBuffers(0, 1, mVertexBuffer.GetAddressOf(), &stride, &offset);
+	mD3DImmediateContext->IASetVertexBuffers(0, 1, mVertexBuffer.GetAddressOf(), &stride, &offset);
 
 	//*** Create index buffer
 	WORD indices[] =
@@ -242,15 +230,13 @@ HRESULT Graphics::Init(const HWND& hWnd)
 	ZeroMemory(&initIndexData, sizeof(initIndexData));
 	initIndexData.pSysMem = indices;
 
-	hr = mD3DDevice->CreateBuffer(&indexBufferDesc, &initIndexData, mIndexBuffer.GetAddressOf());
-	if (FAILED(hr))
-		return hr;
+	HR(mD3DDevice->CreateBuffer(&indexBufferDesc, &initIndexData, mIndexBuffer.GetAddressOf()));
 
 	// Set index buffer
-	mD3DDeviceContext->IASetIndexBuffer(mIndexBuffer.Get(), DXGI_FORMAT_R16_UINT, 0);
+	mD3DImmediateContext->IASetIndexBuffer(mIndexBuffer.Get(), DXGI_FORMAT_R16_UINT, 0);
 
 	// set primitive topology
-	mD3DDeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	mD3DImmediateContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 	//Create constant buffer
 	D3D11_BUFFER_DESC constantBufferDesc;
@@ -259,16 +245,14 @@ HRESULT Graphics::Init(const HWND& hWnd)
 	constantBufferDesc.ByteWidth = sizeof(ConstantBuffer);
 	constantBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
 	constantBufferDesc.CPUAccessFlags = 0;
-	hr = mD3DDevice->CreateBuffer(&constantBufferDesc, NULL, mConstantBuffer.GetAddressOf());
-	if (FAILED(hr))
-		return hr;
+	HR(mD3DDevice->CreateBuffer(&constantBufferDesc, NULL, mConstantBuffer.GetAddressOf()));
 
 	//*** initialize matrices
 	mWorld = XMMatrixIdentity();
 	mView = XMMatrixLookAtLH({ 0.0f,1.0f,-5.0f,0.0f }, { 0.0f,1.0f,0.0f, 0.0f }, { 0.0f,1.0f,0.0f, 0.0f });
 	mProjection = XMMatrixPerspectiveFovLH(XM_PIDIV2, mWndClientWidth / (FLOAT)mWndClientHeight, 0.1f, 100.0f);
 
-	DebugUI::Init(hWnd, mD3DDevice.Get(), mD3DDeviceContext.Get());
+	DebugUI::Init(hWnd, mD3DDevice.Get(), mD3DImmediateContext.Get());
 
 	bIsInited = true;
 
@@ -277,25 +261,28 @@ HRESULT Graphics::Init(const HWND& hWnd)
 
 void Graphics::Render()
 {
+	assert(mD3DImmediateContext);
+	assert(mSwapChain);
+
 	//*** Rotate cube
 	//mWorld = XMMatrixRotationY();
 
 	//*** Clear back buffer
 	float clearColor[4] = { 0.0f, 0.125f, 0.6f, 1.0f }; //RGBA
-	mD3DDeviceContext->ClearRenderTargetView(mRenderTargetView.Get(), clearColor);
+	mD3DImmediateContext->ClearRenderTargetView(mRenderTargetView.Get(), clearColor);
 
 	//*** Update variables
 	ConstantBuffer cb;
 	cb.World = XMMatrixTranspose(mWorld);
 	cb.View = XMMatrixTranspose(mView);
 	cb.Projection = XMMatrixTranspose(mProjection);
-	mD3DDeviceContext->UpdateSubresource(mConstantBuffer.Get(), 0, NULL, &cb, 0, 0);
+	mD3DImmediateContext->UpdateSubresource(mConstantBuffer.Get(), 0, NULL, &cb, 0, 0);
 
 	//*** Render
-	mD3DDeviceContext->VSSetShader(mVertexShader.Get(), NULL, 0);
-	mD3DDeviceContext->VSSetConstantBuffers(0, 1, mConstantBuffer.GetAddressOf());
-	mD3DDeviceContext->PSSetShader(mPixelShader.Get(), NULL, 0);
-	mD3DDeviceContext->DrawIndexed(36, 0, 0);
+	mD3DImmediateContext->VSSetShader(mVertexShader.Get(), NULL, 0);
+	mD3DImmediateContext->VSSetConstantBuffers(0, 1, mConstantBuffer.GetAddressOf());
+	mD3DImmediateContext->PSSetShader(mPixelShader.Get(), NULL, 0);
+	mD3DImmediateContext->DrawIndexed(36, 0, 0);
 
 	DebugUI::SetData("FPS", GetFPS());
 	DebugUI::Render();
@@ -375,25 +362,14 @@ void Graphics::ResizeWindow(uint width, uint height)
 	}
 	*/
 
-	mD3DDeviceContext->OMSetRenderTargets(0, NULL, NULL);
+	mD3DImmediateContext->OMSetRenderTargets(0, NULL, NULL);
 	{
 		mSwapChain->ResizeBuffers(0, mWndClientWidth, mWndClientHeight, DXGI_FORMAT_UNKNOWN, 0);
 
-		hr = CreateRenderTargetView();
-		if (FAILED(hr))
-		{
-			MessageBox(mhWnd, L"CreateRenderTargetView failed", 0, 0);
-			return;
-		}
-
-		hr = CreateDepthStencilView();
-		if (FAILED(hr))
-		{
-			MessageBox(mhWnd, L"CreateDepthStencilView failed", 0, 0);
-			return;
-		}
+		HR(CreateRenderTargetView());
+		HR(CreateDepthStencilView());
 	}
-	mD3DDeviceContext->OMSetRenderTargets(1,mRenderTargetView.GetAddressOf(), mDepthStencilView.Get());
+	mD3DImmediateContext->OMSetRenderTargets(1,mRenderTargetView.GetAddressOf(), mDepthStencilView.Get());
 
 
 	// update viewport width, height
@@ -404,7 +380,7 @@ void Graphics::ResizeWindow(uint width, uint height)
 	vp.TopLeftY = 0.0f;
 	vp.MinDepth = 0.0f;
 	vp.MaxDepth = 1.0f;
-	mD3DDeviceContext->RSSetViewports(1, &vp);
+	mD3DImmediateContext->RSSetViewports(1, &vp);
 
 	// update view projection matrix's aspect ratio
 	mProjection = XMMatrixPerspectiveFovLH(XM_PIDIV2, mWndClientWidth / (FLOAT)mWndClientHeight, 0.1f, 100.0f);
@@ -423,13 +399,9 @@ HRESULT Graphics::CreateRenderTargetView()
 	}
 
 	Microsoft::WRL::ComPtr<ID3D11Texture2D> backBuffer;
-	hr = mSwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (LPVOID*)backBuffer.GetAddressOf());
-	if(FAILED(hr))
-		return hr;
+	HR(mSwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (LPVOID*)backBuffer.GetAddressOf()));
 
-	hr = mD3DDevice->CreateRenderTargetView(backBuffer.Get(), NULL, mRenderTargetView.GetAddressOf());
-	if(FAILED(hr))
-		return hr;
+	HR(mD3DDevice->CreateRenderTargetView(backBuffer.Get(), NULL, mRenderTargetView.GetAddressOf()));
 
 	return hr;
 }
@@ -439,7 +411,7 @@ uint Graphics::CheckMultisampleQualityLevels(const DXGI_FORMAT format, const uin
 	assert(mD3DDevice != nullptr);
 
 	uint result = 0;
-	mD3DDevice->CheckMultisampleQualityLevels(format, sampleCount, &result);
+	HR(mD3DDevice->CheckMultisampleQualityLevels(format, sampleCount, &result));
 
 	return result;
 }
@@ -472,10 +444,8 @@ HRESULT Graphics::CreateDepthStencilView()
 	depthStencilDesc.CPUAccessFlags = 0;
 	depthStencilDesc.MiscFlags = 0;
 
-	hr = mD3DDevice->CreateTexture2D(&depthStencilDesc, 0, mDepthStencilTexture.GetAddressOf());
-	IF_FAILED_LOG_AND_RETURN(hr);
-	hr = mD3DDevice->CreateDepthStencilView(mDepthStencilTexture.Get(), 0, mDepthStencilView.GetAddressOf());
-	IF_FAILED_LOG_AND_RETURN(hr);
+	HR(mD3DDevice->CreateTexture2D(&depthStencilDesc, 0, mDepthStencilTexture.GetAddressOf()));
+	HR(mD3DDevice->CreateDepthStencilView(mDepthStencilTexture.Get(), 0, mDepthStencilView.GetAddressOf()));
 
 	return hr;
 }

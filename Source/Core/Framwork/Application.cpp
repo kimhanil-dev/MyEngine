@@ -66,8 +66,6 @@ void Application::OnResize()
 
 int Application::Run()
 {
-	Init();
-
 	MSG msg = {};
 
 	// WinLoop

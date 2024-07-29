@@ -168,6 +168,7 @@
     <ClInclude Include="Source\Core\Render\Graphics\Graphics.h" />
     <ClInclude Include="Source\Core\Math\Plane.h" />
     <ClInclude Include="Source\Utill\console.h" />
+    <ClInclude Include="Source\Utill\D3DUtill.h" />
     <ClInclude Include="Source\Utill\fbx.h" />
     <ClInclude Include="Source\Core\Framwork\Application.h" />
     <ClInclude Include="Source\Core\Object\Object.h" />
