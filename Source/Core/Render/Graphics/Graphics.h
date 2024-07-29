@@ -34,6 +34,8 @@ private:
 	Microsoft::WRL::ComPtr<ID3D11RenderTargetView>	mRenderTargetView;
 	Microsoft::WRL::ComPtr<ID3D11DepthStencilView>	mDepthStencilView;
 	Microsoft::WRL::ComPtr<ID3D11Texture2D>			mDepthStencilTexture;
+	Microsoft::WRL::ComPtr<ID3D11DepthStencilState> mDepthStencilState;
+	Microsoft::WRL::ComPtr<ID3D11RasterizerState>	mRSWireframe;
 
 	Microsoft::WRL::ComPtr<ID3D11InputLayout>	mInputLayout;
 	Microsoft::WRL::ComPtr<ID3D11Buffer>		mVertexBuffer;

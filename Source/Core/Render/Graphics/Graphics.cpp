@@ -49,6 +49,45 @@ HRESULT Graphics::Init(const HWND& hWnd)
 
 	D3D_FEATURE_LEVEL featureLevel = D3D_FEATURE_LEVEL_11_0;
 
+	{
+		Microsoft::WRL::ComPtr<IDXGIFactory> dxgiFactory;
+		HR(CreateDXGIFactory(__uuidof(IDXGIFactory), (LPVOID*)dxgiFactory.GetAddressOf()));
+
+		//*** query adapters
+		int64 dxVersion = 0;
+		IDXGIOutput* output = nullptr;
+		IDXGIAdapter* adapter = nullptr;
+		DXGI_OUTPUT_DESC outputDesc;
+		DXGI_ADAPTER_DESC adapterDesc;
+		vector<Microsoft::WRL::ComPtr<IDXGIAdapter>> adapters;
+		for (uint iAdapter = 0; dxgiFactory->EnumAdapters(iAdapter, &adapter) != DXGI_ERROR_NOT_FOUND; ++iAdapter)
+		{
+			adapters.emplace_back(adapter);
+
+			adapters[iAdapter]->GetDesc(&adapterDesc);
+
+			adapters[iAdapter]->CheckInterfaceSupport(__uuidof(IDXGIDevice), (LARGE_INTEGER*)&dxVersion);
+			Print(L"Detect Adapter{%d}: [Device Driver Version: %d], [Desc: %s]\n",
+				adapterDesc.DeviceId, dxVersion, adapterDesc.Description);
+			for (uint iOutput = 0; adapters[iAdapter]->EnumOutputs(iOutput, &output) != DXGI_ERROR_NOT_FOUND; ++iOutput)
+			{
+				output->GetDesc(&outputDesc);
+				Print(L"\tConnected Output: {%s}\n", outputDesc.DeviceName);
+
+				uint modeNum = 0;
+				output->GetDisplayModeList(DXGI_FORMAT_R8G8B8A8_UNORM, NULL, &modeNum, NULL);
+				DXGI_MODE_DESC* displayModes = new DXGI_MODE_DESC[modeNum];
+				output->GetDisplayModeList(DXGI_FORMAT_R8G8B8A8_UNORM, NULL, &modeNum, displayModes);
+				for (uint iMode = 0; iMode < modeNum; ++iMode)
+				{
+					Print("\t\tMode: WIDTH = %d HEIGHT = %d REFRESH = %d/%d\n", displayModes[iMode].Width, displayModes[iMode].Height, displayModes[iMode].RefreshRate.Numerator, displayModes[iMode].RefreshRate.Denominator);
+				}
+				delete[] displayModes;
+			}
+		}
+	}
+
+
 	//
 	HR(D3D11CreateDevice(NULL,
 		D3D_DRIVER_TYPE_HARDWARE,
@@ -59,7 +98,7 @@ HRESULT Graphics::Init(const HWND& hWnd)
 		mD3DDevice.GetAddressOf(),
 		&featureLevel,
 		mD3DImmediateContext.GetAddressOf()));
-	
+
 
 	//*** create swap chain
 	DXGI_SWAP_CHAIN_DESC sd;
@@ -75,7 +114,7 @@ HRESULT Graphics::Init(const HWND& hWnd)
 	if (mbEnable4xMsaa)
 	{
 		sd.SampleDesc.Count = 4;
-		m4xMsaaQuality =  CheckMultisampleQualityLevels(sd.BufferDesc.Format, sd.SampleDesc.Count);
+		m4xMsaaQuality = CheckMultisampleQualityLevels(sd.BufferDesc.Format, sd.SampleDesc.Count);
 		sd.SampleDesc.Quality = m4xMsaaQuality - 1;
 	}
 	else
@@ -90,18 +129,21 @@ HRESULT Graphics::Init(const HWND& hWnd)
 	Microsoft::WRL::ComPtr<IDXGIAdapter>	dxgiAdapter;
 	Microsoft::WRL::ComPtr<IDXGIFactory>	dxgiFactory;
 
-	HR(mD3DDevice->QueryInterface(__uuidof(IDXGIDevice),	(LPVOID*)dxgiDevice.GetAddressOf()));
-	HR(dxgiDevice->GetParent(__uuidof(IDXGIAdapter),		(LPVOID*)dxgiAdapter.GetAddressOf()));
-	HR(dxgiAdapter->GetParent(__uuidof(IDXGIFactory),		(LPVOID*)dxgiFactory.GetAddressOf()));
+	HR(mD3DDevice->QueryInterface(__uuidof(IDXGIDevice), (LPVOID*)dxgiDevice.GetAddressOf()));
+	HR(dxgiDevice->GetParent(__uuidof(IDXGIAdapter), (LPVOID*)dxgiAdapter.GetAddressOf()));
+	HR(dxgiAdapter->GetParent(__uuidof(IDXGIFactory), (LPVOID*)dxgiFactory.GetAddressOf()));
 
 	HR(dxgiFactory->CreateSwapChain(mD3DDevice.Get(), &sd, mSwapChain.GetAddressOf()));
+
+	//*** Set DXGI does not monitor the message queue
+	dxgiFactory->MakeWindowAssociation(mhWnd, DXGI_MWA_NO_WINDOW_CHANGES);
 
 	//*** create render target and depth stenil
 	HR(CreateRenderTargetView());
 	HR(CreateDepthStencilView());
 
 	//*** set render target and depth stencil to om
-	mD3DImmediateContext->OMSetRenderTargets(1,mRenderTargetView.GetAddressOf(), mDepthStencilView.Get());
+	mD3DImmediateContext->OMSetRenderTargets(1, mRenderTargetView.GetAddressOf(), NULL);
 
 	//*** set view port
 	D3D11_VIEWPORT vp;
@@ -177,18 +219,38 @@ HRESULT Graphics::Init(const HWND& hWnd)
 		{ XMFLOAT3(-1.0f, -1.0f,  1.0f), XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f) },
 	};
 
+	// pyramid
+	SimpleVertex vertices2[] =
+	{
+		{XMFLOAT3(0.0f,0.5f,0.0f), XMFLOAT4(1.0f,0.0f,0.0f,1.0f)},
+		{XMFLOAT3(-0.5f,-0.5f,-0.5f), XMFLOAT4(0.0f,1.0f,0.0f,1.0f)},
+		{XMFLOAT3(-0.5f, -0.5f,0.5f), XMFLOAT4(0.0f,1.0f,0.0f,1.0f)},
+		{XMFLOAT3(0.5f,-0.5f,0.5f), XMFLOAT4(1.0f,0.0f,0.0f,1.0f)},
+		{XMFLOAT3(0.5f,-0.5f,-0.5f), XMFLOAT4(1.0f,0.0f,0.0f,1.0f)},
+	};
+
+	WORD indices2[] =
+	{
+		0,3,2,
+		0,4,3,
+		0,1,4,
+		0,2,1,
+		2,4,3,
+		2,1,4
+	};
+
 
 	D3D11_BUFFER_DESC bd;
 	ZeroMemory(&bd, sizeof(bd));
 	bd.Usage = D3D11_USAGE_DEFAULT;
-	bd.ByteWidth = sizeof(SimpleVertex) * 8;
+	bd.ByteWidth = sizeof(vertices2);//8;
 	bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
 	bd.CPUAccessFlags = 0;
 	bd.MiscFlags = 0;
 
 	D3D11_SUBRESOURCE_DATA initData;
 	ZeroMemory(&initData, sizeof(initData));
-	initData.pSysMem = vertices;
+	initData.pSysMem = vertices2;
 
 	HR(mD3DDevice->CreateBuffer(&bd, &initData, mVertexBuffer.GetAddressOf()));
 
@@ -221,14 +283,14 @@ HRESULT Graphics::Init(const HWND& hWnd)
 	D3D11_BUFFER_DESC indexBufferDesc;
 	ZeroMemory(&indexBufferDesc, sizeof(indexBufferDesc));
 	indexBufferDesc.Usage = D3D11_USAGE_DEFAULT;
-	indexBufferDesc.ByteWidth = sizeof(WORD) * 36;
+	indexBufferDesc.ByteWidth = sizeof(indices2);// 36;
 	indexBufferDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
 	indexBufferDesc.CPUAccessFlags = 0;
 	indexBufferDesc.MiscFlags = 0;
 
 	D3D11_SUBRESOURCE_DATA initIndexData;
 	ZeroMemory(&initIndexData, sizeof(initIndexData));
-	initIndexData.pSysMem = indices;
+	initIndexData.pSysMem = indices2;
 
 	HR(mD3DDevice->CreateBuffer(&indexBufferDesc, &initIndexData, mIndexBuffer.GetAddressOf()));
 
@@ -237,6 +299,12 @@ HRESULT Graphics::Init(const HWND& hWnd)
 
 	// set primitive topology
 	mD3DImmediateContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+	D3D11_RASTERIZER_DESC rd = {};
+	rd.FillMode = D3D11_FILL_WIREFRAME;
+	rd.CullMode = D3D11_CULL_NONE;
+	HR(mD3DDevice->CreateRasterizerState(&rd, mRSWireframe.GetAddressOf()));
+	mD3DImmediateContext->RSSetState(mRSWireframe.Get());
 
 	//Create constant buffer
 	D3D11_BUFFER_DESC constantBufferDesc;
@@ -265,7 +333,8 @@ void Graphics::Render()
 	assert(mSwapChain);
 
 	//*** Rotate cube
-	//mWorld = XMMatrixRotationY();
+	static float rotation = 0.0f;
+	mWorld = XMMatrixRotationY(rotation += 0.0001f);
 
 	//*** Clear back buffer
 	float clearColor[4] = { 0.0f, 0.125f, 0.6f, 1.0f }; //RGBA
@@ -369,7 +438,7 @@ void Graphics::ResizeWindow(uint width, uint height)
 		HR(CreateRenderTargetView());
 		HR(CreateDepthStencilView());
 	}
-	mD3DImmediateContext->OMSetRenderTargets(1,mRenderTargetView.GetAddressOf(), mDepthStencilView.Get());
+	mD3DImmediateContext->OMSetRenderTargets(1, mRenderTargetView.GetAddressOf(), NULL);
 
 
 	// update viewport width, height
@@ -443,6 +512,7 @@ HRESULT Graphics::CreateDepthStencilView()
 	depthStencilDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
 	depthStencilDesc.CPUAccessFlags = 0;
 	depthStencilDesc.MiscFlags = 0;
+
 
 	HR(mD3DDevice->CreateTexture2D(&depthStencilDesc, 0, mDepthStencilTexture.GetAddressOf()));
 	HR(mD3DDevice->CreateDepthStencilView(mDepthStencilTexture.Get(), 0, mDepthStencilView.GetAddressOf()));

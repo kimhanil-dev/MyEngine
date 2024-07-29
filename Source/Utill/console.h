@@ -51,4 +51,23 @@ namespace console
 		printf_s(format, args...);
 		SetConsoleTextAttribute(hConsole, Color::white);
 	}
+
+	// unicode
+	template <typename ...Types>
+	void printf(const Color color, const wchar_t* format, Types... args)
+	{
+		static bool isInited = false;
+		static HANDLE hConsole = NULL;
+		if (!isInited)
+		{
+			AllocConsole();
+			freopen_s((FILE**)stdout, "CONOUT$", "w", stdout);
+
+			hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+		}
+
+		SetConsoleTextAttribute(hConsole, color);
+		wprintf_s(format, args...);
+		SetConsoleTextAttribute(hConsole, Color::white);
+	}
 }

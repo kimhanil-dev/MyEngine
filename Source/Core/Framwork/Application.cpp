@@ -58,10 +58,10 @@ bool Application::Init()
 void Application::OnResize()
 {
 	RECT rc;
-	GetWindowRect(mhMainWnd, &rc);
+	GetClientRect(mhMainWnd, &rc);
 
-	mClientWidth = rc.right - rc.left;
-	mClientHeight = rc.bottom - rc.top;
+	mClientWidth = rc.right;
+	mClientHeight = rc.bottom;
 }
 
 int Application::Run()
