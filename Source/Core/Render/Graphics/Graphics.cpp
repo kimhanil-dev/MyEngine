@@ -217,11 +217,8 @@ HRESULT Graphics::Init(const HWND& hWnd)
 		{ XMFLOAT3(1.0f, -1.0f, -1.0f), XMFLOAT4(1.0f, 1.0f, 0.0f, 1.0f) },
 		{ XMFLOAT3(1.0f, -1.0f,  1.0f), XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f) },
 		{ XMFLOAT3(-1.0f, -1.0f,  1.0f), XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f) },
-	};
 
-	// pyramid
-	SimpleVertex vertices2[] =
-	{
+		// pyramid
 		{XMFLOAT3(0.0f,0.5f,0.0f), XMFLOAT4(1.0f,0.0f,0.0f,1.0f)},
 		{XMFLOAT3(-0.5f,-0.5f,-0.5f), XMFLOAT4(0.0f,1.0f,0.0f,1.0f)},
 		{XMFLOAT3(-0.5f, -0.5f,0.5f), XMFLOAT4(0.0f,1.0f,0.0f,1.0f)},
@@ -229,28 +226,16 @@ HRESULT Graphics::Init(const HWND& hWnd)
 		{XMFLOAT3(0.5f,-0.5f,-0.5f), XMFLOAT4(1.0f,0.0f,0.0f,1.0f)},
 	};
 
-	WORD indices2[] =
-	{
-		0,3,2,
-		0,4,3,
-		0,1,4,
-		0,2,1,
-		2,4,3,
-		2,1,4
-	};
 
-
-	D3D11_BUFFER_DESC bd;
-	ZeroMemory(&bd, sizeof(bd));
-	bd.Usage = D3D11_USAGE_DEFAULT;
-	bd.ByteWidth = sizeof(vertices2);//8;
+	D3D11_BUFFER_DESC bd{};
+	bd.Usage = D3D11_USAGE_IMMUTABLE;
+	bd.ByteWidth = sizeof(vertices);//8;
 	bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
 	bd.CPUAccessFlags = 0;
 	bd.MiscFlags = 0;
 
-	D3D11_SUBRESOURCE_DATA initData;
-	ZeroMemory(&initData, sizeof(initData));
-	initData.pSysMem = vertices2;
+	D3D11_SUBRESOURCE_DATA initData{};
+	initData.pSysMem = vertices;
 
 	HR(mD3DDevice->CreateBuffer(&bd, &initData, mVertexBuffer.GetAddressOf()));
 
@@ -278,19 +263,27 @@ HRESULT Graphics::Init(const HWND& hWnd)
 
 		6,4,5,
 		7,4,6,
+
+		//pyramid
+		0,3,2,
+		0,4,3,
+		0,1,4,
+		0,2,1,
+		2,4,3,
+		2,1,4
 	};
 
 	D3D11_BUFFER_DESC indexBufferDesc;
 	ZeroMemory(&indexBufferDesc, sizeof(indexBufferDesc));
 	indexBufferDesc.Usage = D3D11_USAGE_DEFAULT;
-	indexBufferDesc.ByteWidth = sizeof(indices2);// 36;
+	indexBufferDesc.ByteWidth = sizeof(indices);// 36;
 	indexBufferDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
 	indexBufferDesc.CPUAccessFlags = 0;
 	indexBufferDesc.MiscFlags = 0;
 
 	D3D11_SUBRESOURCE_DATA initIndexData;
 	ZeroMemory(&initIndexData, sizeof(initIndexData));
-	initIndexData.pSysMem = indices2;
+	initIndexData.pSysMem = indices;
 
 	HR(mD3DDevice->CreateBuffer(&indexBufferDesc, &initIndexData, mIndexBuffer.GetAddressOf()));
 
@@ -351,7 +344,10 @@ void Graphics::Render()
 	mD3DImmediateContext->VSSetShader(mVertexShader.Get(), NULL, 0);
 	mD3DImmediateContext->VSSetConstantBuffers(0, 1, mConstantBuffer.GetAddressOf());
 	mD3DImmediateContext->PSSetShader(mPixelShader.Get(), NULL, 0);
+	// draw box
 	mD3DImmediateContext->DrawIndexed(36, 0, 0);
+	// draw pyramid
+	mD3DImmediateContext->DrawIndexed(18, 36, 8);
 
 	DebugUI::SetData("FPS", GetFPS());
 	DebugUI::Render();
