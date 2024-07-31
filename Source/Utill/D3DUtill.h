@@ -5,6 +5,15 @@
 #include <format>
 
 #if defined(DEBUG) | (_DEBUG)
+	#ifndef IF_FAILED_RET
+	#define IF_FAILED_RET(x)	\
+	{						\
+		HRESULT hr = (x);	\
+		if (FAILED(hr))		\
+			return hr;		\
+	}
+	#endif
+
 	#ifndef HR
 	#define HR(x) \
 	{ HRESULT hr = (x); \
@@ -22,6 +31,9 @@
 #else
 	#ifndef HR
 	#define HR(x) (x)
+	#endif
+	#ifndef IF_FAILED_RET
+	#define IF_FAILED_RET(x) (x)
 	#endif
 #endif
 

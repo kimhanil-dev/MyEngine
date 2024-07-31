@@ -4,7 +4,7 @@
 #include <fbxsdk/fileio/fbxiosettings.h>
 
 #include "console.h"
-#include "Core/Render/Vertex.h"
+#include "Core/Render/Mesh.h"
 
 std::map<uint, Mesh*> gMeshes;
 

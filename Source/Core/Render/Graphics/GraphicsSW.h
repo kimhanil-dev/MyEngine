@@ -13,7 +13,7 @@ class GraphicsSW : public IGraphics
 {
 public:
 	// Inherited via IGraphics
-	HRESULT Init(const HWND& hWnd) override;
+	bool Init(const HWND& hWnd) override;
 	void Render() override;
 	void Release() override;
 
@@ -43,5 +43,8 @@ private:
 	// Inherited via IGraphics
 	bool bIsInited = false;
 	bool IsInited() override;
+
+	// IGraphics을(를) 통해 상속됨
+	void BindMesh(Mesh* mesh) override;
 };
 

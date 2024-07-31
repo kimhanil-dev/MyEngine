@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "GraphicsSW.h"
 
+#include "Core/Render/Mesh.h"
 #include "Core/Object/Object.h"
 #include "Utill/frame.h"
 
@@ -552,7 +553,7 @@ void Draw_Indexed(uint* pixelBuffer, uint width, uint height, const Object* mCam
 #pragma endregion Transformation
 
 
-HRESULT GraphicsSW::Init(const HWND& hWnd)
+bool GraphicsSW::Init(const HWND& hWnd)
 {
 	assert(hWnd != NULL);
 
@@ -584,7 +585,7 @@ HRESULT GraphicsSW::Init(const HWND& hWnd)
 
 	bIsInited = true;
 
-	return S_OK;
+	return true;
 }
 
 void GraphicsSW::Render()
@@ -744,4 +745,8 @@ void GraphicsSW::ResizeWindow(uint width, uint height)
 bool GraphicsSW::IsInited()
 {
 	return bIsInited;
+}
+
+void GraphicsSW::BindMesh(Mesh* mesh)
+{
 }

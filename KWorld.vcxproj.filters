@@ -87,6 +87,8 @@
     <ClInclude Include="Resource\resource.h" />
     <ClInclude Include="Source\Core\Framwork\Timer.h" />
     <ClInclude Include="Source\Game\Game.h" />
+    <ClInclude Include="Source\Utill\D3DUtill.h" />
+    <ClInclude Include="Source\Core\Render\Mesh.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Core\Math\Vector.cpp">
@@ -137,5 +139,8 @@
     <Image Include="Resource\KWorld.ico">
       <Filter>Resource Files</Filter>
     </Image>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="Shader\color.hlsl" />
   </ItemGroup>
 </Project>

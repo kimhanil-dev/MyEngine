@@ -1,6 +1,9 @@
 #include "pch.h"
 #include "Graphics.h"
 
+#include <fstream>
+
+#include "Core/Render/Mesh.h"
 #include "Utill/console.h"
 #include "Utill/frame.h"
 #include "Utill/D3DUtill.h"
@@ -15,19 +18,133 @@ struct SimpleVertex
 
 struct ConstantBuffer
 {
-	XMMATRIX World;
-	XMMATRIX View;
-	XMMATRIX Projection;
+	XMMATRIX WorldViewPrjection;
 };
 
-HRESULT Graphics::Init(const HWND& hWnd)
+bool Graphics::Init(const HWND& hWnd)
 {
 	mhWnd = hWnd;
 
-	HRESULT hr = S_OK;
+	HR(BuildDevice());
+	HR(BuildFX());
+	HR(BuildVertexLayout());
+	HR(BuildGeometryBuffers());
 
+	//*** initialize matrices
+	mWorld = XMMatrixIdentity();
+	mView = XMMatrixLookAtLH({ 0.0f,1.0f,-5.0f,0.0f }, { 0.0f,1.0f,0.0f, 0.0f }, { 0.0f,1.0f,0.0f, 0.0f });
+	mProjection = XMMatrixPerspectiveFovLH(XM_PIDIV2, mWndClientWidth / (FLOAT)mWndClientHeight, 0.1f, 100.0f);
+
+	DebugUI::Init(hWnd, mD3DDevice.Get(), mD3DImmediateContext.Get());
+
+	bIsInited = true;
+
+	return true;
+}
+
+void Graphics::ResizeWindow(uint width, uint height)
+{
+	mWndClientWidth = width;
+	mWndClientHeight = height;
+
+	mD3DImmediateContext->OMSetRenderTargets(0, NULL, NULL);
+	{
+		mSwapChain->ResizeBuffers(0, mWndClientWidth, mWndClientHeight, DXGI_FORMAT_UNKNOWN, 0);
+
+		HR(CreateRenderTargetView());
+		HR(CreateDepthStencilView());
+	}
+	mD3DImmediateContext->OMSetRenderTargets(1, mRenderTargetView.GetAddressOf(), mDepthStencilView.Get());
+
+
+	// update viewport width, height
+	D3D11_VIEWPORT vp;
+	vp.Width = (FLOAT)mWndClientWidth;
+	vp.Height = (FLOAT)mWndClientHeight;
+	vp.TopLeftX = 0.0f;
+	vp.TopLeftY = 0.0f;
+	vp.MinDepth = 0.0f;
+	vp.MaxDepth = 1.0f;
+	mD3DImmediateContext->RSSetViewports(1, &vp);
+
+	// update view projection matrix's aspect ratio
+	mProjection = XMMatrixPerspectiveFovLH(XM_PIDIV2, mWndClientWidth / (FLOAT)mWndClientHeight, 0.1f, 100.0f);
+}
+
+void Graphics::Render()
+{
+	assert(mD3DImmediateContext);
+	assert(mSwapChain);
+
+	//*** Rotate cube
+	static float rotation = 0.0f;
+	mWorld = XMMatrixRotationY(rotation += 0.0001f);
+
+	//*** Clear back buffer
+	float clearColor[4] = { 0.0f, 0.125f, 0.6f, 1.0f }; //RGBA
+	mD3DImmediateContext->ClearRenderTargetView(mRenderTargetView.Get(), clearColor);
+	//mD3DImmediateContext->ClearDepthStencilView(mDepthStencilView.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
+
+	mD3DImmediateContext->IASetInputLayout(mInputLayout.Get());
+	mD3DImmediateContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+	//*** set geomatry buffers
+	UINT stride = sizeof(SimpleVertex);
+	UINT offset = 0;
+	for (const GeometryBuffers& buffers : mGeometries)
+	{
+		mD3DImmediateContext->IASetVertexBuffers(0, 1, buffers.mVB.GetAddressOf(), &stride, &offset);
+		mD3DImmediateContext->IASetIndexBuffer(buffers.mIB.Get(), DXGI_FORMAT_R32_UINT, 0);
+
+		// set pass's constant 
+		XMMATRIX worldViewProj = mWorld * mView * mProjection;
+		buffers.mWorldViewProj->SetMatrix((float*)&worldViewProj);
+
+		D3DX11_TECHNIQUE_DESC techDesc;
+		mFXTech->GetDesc(&techDesc);
+		for (UINT iPass = 0; iPass < techDesc.Passes; ++iPass)
+		{
+			// update constant buffer
+			mFXTech->GetPassByIndex(iPass)->Apply(0, mD3DImmediateContext.Get());
+
+			//*** draw
+			// draw cube
+			mD3DImmediateContext->DrawIndexed(36, 0, 0);
+			// draw pyramid
+			mD3DImmediateContext->DrawIndexed(18, 36, 8);
+		}
+	}
+	
+
+	//*** imgui draw
+	DebugUI::SetData("FPS", GetFPS());
+	DebugUI::Render();
+
+	mSwapChain->Present(0, 0);
+}
+
+void Graphics::Release()
+{
+	DebugUI::Release();
+}
+
+void Graphics::SetCamera(Object* object)
+{
+}
+
+void Graphics::AddObject(Object* object)
+{
+}
+
+bool Graphics::IsInited()
+{
+	return bIsInited;
+}
+
+HRESULT Graphics::BuildDevice()
+{
 	RECT rc;
-	GetClientRect(hWnd, &rc);
+	GetClientRect(mhWnd, &rc);
 	mWndClientWidth = rc.right - rc.left;
 	mWndClientHeight = rc.bottom - rc.top;
 
@@ -51,7 +168,7 @@ HRESULT Graphics::Init(const HWND& hWnd)
 
 	{
 		Microsoft::WRL::ComPtr<IDXGIFactory> dxgiFactory;
-		HR(CreateDXGIFactory(__uuidof(IDXGIFactory), (LPVOID*)dxgiFactory.GetAddressOf()));
+		IF_FAILED_RET(CreateDXGIFactory(__uuidof(IDXGIFactory), (LPVOID*)dxgiFactory.GetAddressOf()));
 
 		//*** query adapters
 		int64 dxVersion = 0;
@@ -80,16 +197,16 @@ HRESULT Graphics::Init(const HWND& hWnd)
 				output->GetDisplayModeList(DXGI_FORMAT_R8G8B8A8_UNORM, NULL, &modeNum, displayModes);
 				for (uint iMode = 0; iMode < modeNum; ++iMode)
 				{
-					Print("\t\tMode: WIDTH = %d HEIGHT = %d REFRESH = %d/%d\n", displayModes[iMode].Width, displayModes[iMode].Height, displayModes[iMode].RefreshRate.Numerator, displayModes[iMode].RefreshRate.Denominator);
+					Print("\t\tMode: WIDTH = %d HEIGHT = %d REFRESH = %d/%d\n", 
+						displayModes[iMode].Width, displayModes[iMode].Height, displayModes[iMode].RefreshRate.Numerator, displayModes[iMode].RefreshRate.Denominator);
 				}
 				delete[] displayModes;
 			}
 		}
 	}
 
-
 	//
-	HR(D3D11CreateDevice(NULL,
+	IF_FAILED_RET(D3D11CreateDevice(NULL,
 		D3D_DRIVER_TYPE_HARDWARE,
 		NULL,
 		createDeviceFlags,
@@ -110,7 +227,7 @@ HRESULT Graphics::Init(const HWND& hWnd)
 	sd.BufferDesc.RefreshRate.Numerator = 60;
 	sd.BufferDesc.RefreshRate.Denominator = 1;
 	sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-	sd.OutputWindow = hWnd;
+	sd.OutputWindow = mhWnd;
 	if (mbEnable4xMsaa)
 	{
 		sd.SampleDesc.Count = 4;
@@ -129,21 +246,21 @@ HRESULT Graphics::Init(const HWND& hWnd)
 	Microsoft::WRL::ComPtr<IDXGIAdapter>	dxgiAdapter;
 	Microsoft::WRL::ComPtr<IDXGIFactory>	dxgiFactory;
 
-	HR(mD3DDevice->QueryInterface(__uuidof(IDXGIDevice), (LPVOID*)dxgiDevice.GetAddressOf()));
-	HR(dxgiDevice->GetParent(__uuidof(IDXGIAdapter), (LPVOID*)dxgiAdapter.GetAddressOf()));
-	HR(dxgiAdapter->GetParent(__uuidof(IDXGIFactory), (LPVOID*)dxgiFactory.GetAddressOf()));
+	IF_FAILED_RET(mD3DDevice->QueryInterface(__uuidof(IDXGIDevice), (LPVOID*)dxgiDevice.GetAddressOf()));
+	IF_FAILED_RET(dxgiDevice->GetParent(__uuidof(IDXGIAdapter), (LPVOID*)dxgiAdapter.GetAddressOf()));
+	IF_FAILED_RET(dxgiAdapter->GetParent(__uuidof(IDXGIFactory), (LPVOID*)dxgiFactory.GetAddressOf()));
 
-	HR(dxgiFactory->CreateSwapChain(mD3DDevice.Get(), &sd, mSwapChain.GetAddressOf()));
+	IF_FAILED_RET(dxgiFactory->CreateSwapChain(mD3DDevice.Get(), &sd, mSwapChain.GetAddressOf()));
 
 	//*** Set DXGI does not monitor the message queue
 	dxgiFactory->MakeWindowAssociation(mhWnd, DXGI_MWA_NO_WINDOW_CHANGES);
 
 	//*** create render target and depth stenil
-	HR(CreateRenderTargetView());
-	HR(CreateDepthStencilView());
+	IF_FAILED_RET(CreateRenderTargetView());
+	IF_FAILED_RET(CreateDepthStencilView());
 
 	//*** set render target and depth stencil to om
-	mD3DImmediateContext->OMSetRenderTargets(1, mRenderTargetView.GetAddressOf(), NULL);
+	mD3DImmediateContext->OMSetRenderTargets(1, mRenderTargetView.GetAddressOf(), mDepthStencilView.Get());
 
 	//*** set view port
 	D3D11_VIEWPORT vp;
@@ -155,300 +272,97 @@ HRESULT Graphics::Init(const HWND& hWnd)
 	vp.TopLeftY = 0;
 	mD3DImmediateContext->RSSetViewports(1, &vp);
 
-	//*** compile shader
-	Microsoft::WRL::ComPtr<ID3DBlob> errorMsg = nullptr;
-	Microsoft::WRL::ComPtr<ID3DBlob> vsBlob = nullptr;
-	hr = D3DCompileFromFile(L"Shader/SimpleVS.fx", NULL, NULL, "VS", "vs_4_0",
-		D3DCOMPILE_ENABLE_STRICTNESS, NULL, vsBlob.GetAddressOf(), errorMsg.GetAddressOf());
-	if (FAILED(hr))
+	return S_OK;
+}
+
+HRESULT Graphics::BuildGeometryBuffers(const Mesh* inMesh, GeometryBuffers& outGeomtryBuffers)
+{
+	assert(inMesh);
+	assert(inMesh->IndexCount == 0 || inMesh->VertexCount == 0);
+
+	// create vertex buffer
+	SimpleVertex* vertices = new SimpleVertex[inMesh->VertexCount];
 	{
-		if (errorMsg != nullptr)
+		FVector position;
+		FVector color;
+		for (UINT iVertex = 0; iVertex < inMesh->VertexCount; ++iVertex)
 		{
-			PrintError("Shader compile failed : %s\n", (char*)errorMsg->GetBufferPointer());
+			position = inMesh->Vertices[iVertex].Position;
+			color = inMesh->Vertices[iVertex].Color;
+			vertices[iVertex].Pos = XMFLOAT3(position.X, position.Y, position.Z);
+			vertices[iVertex].Col = XMFLOAT4(color.X,color.Y,color.Z,1.0f);
 		}
 
-		return hr;
+		D3D11_BUFFER_DESC bd{};
+		bd.Usage = D3D11_USAGE_IMMUTABLE;
+		bd.ByteWidth = sizeof(vertices);
+		bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+		bd.CPUAccessFlags = 0;
+		bd.MiscFlags = 0;
+
+		D3D11_SUBRESOURCE_DATA initData{};
+		initData.pSysMem = vertices;
+
+		IF_FAILED_RET(mD3DDevice->CreateBuffer(&bd, &initData, outGeomtryBuffers.mVB.GetAddressOf()));
 	}
+	delete[] vertices;
 
-	hr = mD3DDevice->CreateVertexShader(vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), NULL, mVertexShader.GetAddressOf());
-	if (FAILED(hr))
-	{
-		return hr;
-	}
-
-
-	//*** create input layout
-	D3D11_INPUT_ELEMENT_DESC layout[] =
-	{
-		{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
-		{"COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0},
-	};
-	uint numElements = ARRAYSIZE(layout);
-
-	hr = mD3DDevice->CreateInputLayout(layout, numElements, vsBlob->GetBufferPointer(),
-		vsBlob->GetBufferSize(), mInputLayout.GetAddressOf());
-	if (FAILED(hr))
-		return hr;
-
-	mD3DImmediateContext->IASetInputLayout(mInputLayout.Get());
-
-	Microsoft::WRL::ComPtr<ID3DBlob> psBlob = nullptr;
-	hr = D3DCompileFromFile(L"Shader/SimplePS.fx", NULL, NULL, "PS", "ps_4_0",
-		D3DCOMPILE_ENABLE_STRICTNESS, NULL, psBlob.GetAddressOf(), errorMsg.GetAddressOf());
-	if (FAILED(hr))
-	{
-		if (errorMsg != nullptr)
-		{
-			PrintError("Shader compile failed : %s\n", (char*)errorMsg->GetBufferPointer());
-		}
-		return hr;
-	}
-
-	HR(mD3DDevice->CreatePixelShader(psBlob->GetBufferPointer(), psBlob->GetBufferSize(), NULL, mPixelShader.GetAddressOf()));
-
-	//*** create vertex buffer
-	SimpleVertex vertices[] =
-	{
-		{ XMFLOAT3(-1.0f,  1.0f, -1.0f), XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f) },
-		{ XMFLOAT3(1.0f,  1.0f, -1.0f), XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f) },
-		{ XMFLOAT3(1.0f,  1.0f,  1.0f), XMFLOAT4(0.0f, 1.0f, 1.0f, 1.0f) },
-		{ XMFLOAT3(-1.0f,  1.0f,  1.0f), XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f) },
-		{ XMFLOAT3(-1.0f, -1.0f, -1.0f), XMFLOAT4(1.0f, 0.0f, 1.0f, 1.0f) },
-		{ XMFLOAT3(1.0f, -1.0f, -1.0f), XMFLOAT4(1.0f, 1.0f, 0.0f, 1.0f) },
-		{ XMFLOAT3(1.0f, -1.0f,  1.0f), XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f) },
-		{ XMFLOAT3(-1.0f, -1.0f,  1.0f), XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f) },
-
-		// pyramid
-		{XMFLOAT3(0.0f,0.5f,0.0f), XMFLOAT4(1.0f,0.0f,0.0f,1.0f)},
-		{XMFLOAT3(-0.5f,-0.5f,-0.5f), XMFLOAT4(0.0f,1.0f,0.0f,1.0f)},
-		{XMFLOAT3(-0.5f, -0.5f,0.5f), XMFLOAT4(0.0f,1.0f,0.0f,1.0f)},
-		{XMFLOAT3(0.5f,-0.5f,0.5f), XMFLOAT4(1.0f,0.0f,0.0f,1.0f)},
-		{XMFLOAT3(0.5f,-0.5f,-0.5f), XMFLOAT4(1.0f,0.0f,0.0f,1.0f)},
-	};
-
-
-	D3D11_BUFFER_DESC bd{};
-	bd.Usage = D3D11_USAGE_IMMUTABLE;
-	bd.ByteWidth = sizeof(vertices);//8;
-	bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-	bd.CPUAccessFlags = 0;
-	bd.MiscFlags = 0;
-
-	D3D11_SUBRESOURCE_DATA initData{};
-	initData.pSysMem = vertices;
-
-	HR(mD3DDevice->CreateBuffer(&bd, &initData, mVertexBuffer.GetAddressOf()));
-
-	uint stride = sizeof(SimpleVertex);
-	uint offset = 0;
-	mD3DImmediateContext->IASetVertexBuffers(0, 1, mVertexBuffer.GetAddressOf(), &stride, &offset);
-
-	//*** Create index buffer
-	WORD indices[] =
-	{
-		3,1,0,
-		2,1,3,
-
-		0,5,4,
-		1,5,0,
-
-		3,4,7,
-		0,4,3,
-
-		1,6,5,
-		2,6,1,
-
-		2,7,6,
-		3,7,2,
-
-		6,4,5,
-		7,4,6,
-
-		//pyramid
-		0,3,2,
-		0,4,3,
-		0,1,4,
-		0,2,1,
-		2,4,3,
-		2,1,4
-	};
+	// create index buffer
+	assert(sizeof(uint) == sizeof(UINT));
+	UINT indexCount = inMesh->IndexCount;
+	UINT* indices = (UINT*)inMesh->Indices;
 
 	D3D11_BUFFER_DESC indexBufferDesc;
 	ZeroMemory(&indexBufferDesc, sizeof(indexBufferDesc));
 	indexBufferDesc.Usage = D3D11_USAGE_DEFAULT;
-	indexBufferDesc.ByteWidth = sizeof(indices);// 36;
+	indexBufferDesc.ByteWidth = sizeof(UINT) * indexCount;// 36;
 	indexBufferDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
 	indexBufferDesc.CPUAccessFlags = 0;
 	indexBufferDesc.MiscFlags = 0;
 
 	D3D11_SUBRESOURCE_DATA initIndexData;
 	ZeroMemory(&initIndexData, sizeof(initIndexData));
-	initIndexData.pSysMem = indices;
+	initIndexData.pSysMem = inMesh->Indices;
 
-	HR(mD3DDevice->CreateBuffer(&indexBufferDesc, &initIndexData, mIndexBuffer.GetAddressOf()));
-
-	// Set index buffer
-	mD3DImmediateContext->IASetIndexBuffer(mIndexBuffer.Get(), DXGI_FORMAT_R16_UINT, 0);
-
-	// set primitive topology
-	mD3DImmediateContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
-	D3D11_RASTERIZER_DESC rd = {};
-	rd.FillMode = D3D11_FILL_WIREFRAME;
-	rd.CullMode = D3D11_CULL_NONE;
-	HR(mD3DDevice->CreateRasterizerState(&rd, mRSWireframe.GetAddressOf()));
-	mD3DImmediateContext->RSSetState(mRSWireframe.Get());
-
-	//Create constant buffer
-	D3D11_BUFFER_DESC constantBufferDesc;
-	ZeroMemory(&constantBufferDesc, sizeof(constantBufferDesc));
-	constantBufferDesc.Usage = D3D11_USAGE_DEFAULT;
-	constantBufferDesc.ByteWidth = sizeof(ConstantBuffer);
-	constantBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-	constantBufferDesc.CPUAccessFlags = 0;
-	HR(mD3DDevice->CreateBuffer(&constantBufferDesc, NULL, mConstantBuffer.GetAddressOf()));
-
-	//*** initialize matrices
-	mWorld = XMMatrixIdentity();
-	mView = XMMatrixLookAtLH({ 0.0f,1.0f,-5.0f,0.0f }, { 0.0f,1.0f,0.0f, 0.0f }, { 0.0f,1.0f,0.0f, 0.0f });
-	mProjection = XMMatrixPerspectiveFovLH(XM_PIDIV2, mWndClientWidth / (FLOAT)mWndClientHeight, 0.1f, 100.0f);
-
-	DebugUI::Init(hWnd, mD3DDevice.Get(), mD3DImmediateContext.Get());
-
-	bIsInited = true;
+	IF_FAILED_RET(mD3DDevice->CreateBuffer(&indexBufferDesc, &initIndexData, outGeomtryBuffers.mIB.GetAddressOf()));
 
 	return S_OK;
 }
 
-void Graphics::Render()
+HRESULT Graphics::BuildVertexLayout()
 {
-	assert(mD3DImmediateContext);
-	assert(mSwapChain);
-
-	//*** Rotate cube
-	static float rotation = 0.0f;
-	mWorld = XMMatrixRotationY(rotation += 0.0001f);
-
-	//*** Clear back buffer
-	float clearColor[4] = { 0.0f, 0.125f, 0.6f, 1.0f }; //RGBA
-	mD3DImmediateContext->ClearRenderTargetView(mRenderTargetView.Get(), clearColor);
-
-	//*** Update variables
-	ConstantBuffer cb;
-	cb.World = XMMatrixTranspose(mWorld);
-	cb.View = XMMatrixTranspose(mView);
-	cb.Projection = XMMatrixTranspose(mProjection);
-	mD3DImmediateContext->UpdateSubresource(mConstantBuffer.Get(), 0, NULL, &cb, 0, 0);
-
-	//*** Render
-	mD3DImmediateContext->VSSetShader(mVertexShader.Get(), NULL, 0);
-	mD3DImmediateContext->VSSetConstantBuffers(0, 1, mConstantBuffer.GetAddressOf());
-	mD3DImmediateContext->PSSetShader(mPixelShader.Get(), NULL, 0);
-	// draw box
-	mD3DImmediateContext->DrawIndexed(36, 0, 0);
-	// draw pyramid
-	mD3DImmediateContext->DrawIndexed(18, 36, 8);
-
-	DebugUI::SetData("FPS", GetFPS());
-	DebugUI::Render();
-
-	mSwapChain->Present(0, 0);
-}
-
-void Graphics::Release()
-{
-	DebugUI::Release();
-}
-
-void Graphics::SetCamera(Object* object)
-{
-}
-
-void Graphics::AddObject(Object* object)
-{
-}
-
-bool Graphics::IsInited()
-{
-	return bIsInited;
-}
-
-void Graphics::ResizeWindow(uint width, uint height)
-{
-	mWndClientWidth = width;
-	mWndClientHeight = height;
-
-	HRESULT hr = S_OK;
-
-	/*
-	// Alt + Enter 단축키 or IDXGISwapChain::SetFullScreenState()를 통해 전체 화면으로 변경될때
-	// 이 경우 DXGI는 Front Buffer를 최대 해상도 [ex) 1920x1080]으로 설정한다.
-	// 그러나 WM_SIZE 메세지를 통해 전달되는 해상도는 메뉴바의 높이를 제외한(1080 - MenuBarHeight) 크기를 전달 받게 된다.
-	// 따라서, 이 값으로 재 설정한 BackBuffer는 Front Buffer와 해상도 차이(Menu Bar 높이 만큼)가 발생하게 된다.
-	// 이를 해결하기 위해, GetFullScreenState() == true 일때 메인 모니터의 전체화면 해상도를 불러와 Backbuffer를 초기화 시킨다.
-	BOOL bIsFullScreen = false;
-	IDXGIOutput* mainOutput = nullptr;
-
-	mSwapChain->GetContainingOutput(&mainOutput);
-	mSwapChain->GetFullscreenState(&bIsFullScreen, &mainOutput);
-
-	if (bIsFullScreen)
+	D3D11_INPUT_ELEMENT_DESC layout[] =
 	{
-		IDXGIOutput1* output1;
-		hr = mainOutput->QueryInterface(&output1);
-		if (FAILED(hr))
-			assert(false);
+		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+	};
+	uint numElements = ARRAYSIZE(layout);
 
-		DXGI_SWAP_CHAIN_DESC dc;
-		mSwapChain->GetDesc(&dc);
+	D3DX11_PASS_DESC passDesc;
+	mFXTech->GetPassByIndex(0)->GetDesc(&passDesc);
+	IF_FAILED_RET(mD3DDevice->CreateInputLayout(layout, numElements, passDesc.pIAInputSignature,
+		passDesc.IAInputSignatureSize, mInputLayout.GetAddressOf()));
 
-		uint num = 0;
-		output1->GetDisplayModeList1(dc.BufferDesc.Format, NULL, &num, NULL);
+	return S_OK;
+}
 
-		if (num != 0)
-		{
-			DXGI_MODE_DESC1* descs = new DXGI_MODE_DESC1[num];
-			output1->GetDisplayModeList1(dc.BufferDesc.Format, NULL, &num, descs);
+HRESULT Graphics::BuildFX(GeometryBuffers& outGeomtryBuffers)
+{
+	std::ifstream fin("./Shader/color.fxo", std::ios::binary);
+	fin.seekg(0, std::ios_base::end);
+	int size = (int)fin.tellg();
+	fin.seekg(0, std::ios_base::beg);
+	std::vector<char> compiledShader(size);
+	fin.read(&compiledShader[0], size);
+	fin.close();
 
-			for (int i = 0; i < num; ++i)
-			{
-				if (descs[i].Width >= mWndClientWidth && descs[i].Height >= mWndClientHeight)
-				{
-					mWndClientWidth = descs[i].Width;
-					mWndClientHeight = descs[i].Height;
-				}
-			}
+	IF_FAILED_RET(D3DX11CreateEffectFromMemory((LPVOID)&compiledShader[0],
+		compiledShader.size(), NULL, mD3DDevice.Get(), outGeomtryBuffers.mFX.GetAddressOf()));
 
-			delete[] descs;
-		}
+	outGeomtryBuffers.mWorldViewProj = outGeomtryBuffers.mFX->GetVariableByName("gWorldViewProj")->AsMatrix();
+	outGeomtryBuffers.mTech = outGeomtryBuffers.mFX->GetTechniqueByName("ColorTech");
 
-		output1->Release();
-		mainOutput->Release();
-	}
-	*/
-
-	mD3DImmediateContext->OMSetRenderTargets(0, NULL, NULL);
-	{
-		mSwapChain->ResizeBuffers(0, mWndClientWidth, mWndClientHeight, DXGI_FORMAT_UNKNOWN, 0);
-
-		HR(CreateRenderTargetView());
-		HR(CreateDepthStencilView());
-	}
-	mD3DImmediateContext->OMSetRenderTargets(1, mRenderTargetView.GetAddressOf(), NULL);
-
-
-	// update viewport width, height
-	D3D11_VIEWPORT vp;
-	vp.Width = (FLOAT)mWndClientWidth;
-	vp.Height = (FLOAT)mWndClientHeight;
-	vp.TopLeftX = 0.0f;
-	vp.TopLeftY = 0.0f;
-	vp.MinDepth = 0.0f;
-	vp.MaxDepth = 1.0f;
-	mD3DImmediateContext->RSSetViewports(1, &vp);
-
-	// update view projection matrix's aspect ratio
-	mProjection = XMMatrixPerspectiveFovLH(XM_PIDIV2, mWndClientWidth / (FLOAT)mWndClientHeight, 0.1f, 100.0f);
+	return S_OK;
 }
 
 HRESULT Graphics::CreateRenderTargetView()
@@ -464,9 +378,9 @@ HRESULT Graphics::CreateRenderTargetView()
 	}
 
 	Microsoft::WRL::ComPtr<ID3D11Texture2D> backBuffer;
-	HR(mSwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (LPVOID*)backBuffer.GetAddressOf()));
+	IF_FAILED_RET(mSwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (LPVOID*)backBuffer.GetAddressOf()));
 
-	HR(mD3DDevice->CreateRenderTargetView(backBuffer.Get(), NULL, mRenderTargetView.GetAddressOf()));
+	IF_FAILED_RET(mD3DDevice->CreateRenderTargetView(backBuffer.Get(), NULL, mRenderTargetView.GetAddressOf()));
 
 	return hr;
 }
@@ -476,15 +390,22 @@ uint Graphics::CheckMultisampleQualityLevels(const DXGI_FORMAT format, const uin
 	assert(mD3DDevice != nullptr);
 
 	uint result = 0;
-	HR(mD3DDevice->CheckMultisampleQualityLevels(format, sampleCount, &result));
+	IF_FAILED_RET(mD3DDevice->CheckMultisampleQualityLevels(format, sampleCount, &result));
 
 	return result;
 }
 
+void Graphics::BindMesh(Mesh* mesh)
+{
+	assert(mesh);
+
+}
+
 HRESULT Graphics::CreateDepthStencilView()
 {
-	assert(mD3DDevice != nullptr);
-	assert(mSwapChain != nullptr);
+	assert(mD3DImmediateContext);
+	assert(mD3DDevice);
+	assert(mSwapChain);
 
 	HRESULT hr = S_OK;
 
@@ -498,20 +419,22 @@ HRESULT Graphics::CreateDepthStencilView()
 	mSwapChain->GetDesc(&swapChainDesc);
 
 	D3D11_TEXTURE2D_DESC depthStencilDesc = {};
-	depthStencilDesc.Width = mWndClientWidth;
-	depthStencilDesc.Height = mWndClientHeight;
-	depthStencilDesc.MipLevels = 1;
-	depthStencilDesc.ArraySize = 1;
-	depthStencilDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
-	depthStencilDesc.SampleDesc = swapChainDesc.SampleDesc;
-	depthStencilDesc.Usage = D3D11_USAGE_DEFAULT;
-	depthStencilDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
-	depthStencilDesc.CPUAccessFlags = 0;
-	depthStencilDesc.MiscFlags = 0;
+	
+	depthStencilDesc.Width		= mWndClientWidth;
+	depthStencilDesc.Height		= mWndClientHeight;
+	depthStencilDesc.MipLevels	= 1;
+	depthStencilDesc.ArraySize	= 1;
+	depthStencilDesc.Format		= DXGI_FORMAT_D24_UNORM_S8_UINT;
 
+	depthStencilDesc.SampleDesc = swapChainDesc.SampleDesc;
+
+	depthStencilDesc.Usage			= D3D11_USAGE_DEFAULT;
+	depthStencilDesc.BindFlags		= D3D11_BIND_DEPTH_STENCIL;
+	depthStencilDesc.CPUAccessFlags = 0;
+	depthStencilDesc.MiscFlags		= 0;
 
 	HR(mD3DDevice->CreateTexture2D(&depthStencilDesc, 0, mDepthStencilTexture.GetAddressOf()));
-	HR(mD3DDevice->CreateDepthStencilView(mDepthStencilTexture.Get(), 0, mDepthStencilView.GetAddressOf()));
+	HR(mD3DDevice->CreateDepthStencilView(mDepthStencilTexture.Get(), 0, NULL));
 
 	return hr;
 }
