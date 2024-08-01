@@ -5,11 +5,18 @@
 class FVector
 {
 public:
-	float X = 0.0f, Y = 0.0f, Z = 0.0f;
+	union
+	{
+		float v[3]{};
+		struct
+		{
+			float X, Y, Z;
+		};
+	};
 
-	FVector(){}
-	FVector(float x, float y, float z) :X(x), Y(y), Z(z) {}
-	FVector(float num) :X(num), Y(num), Z(num) {}
+	FVector() :v{0.0f,0.0f,0.0f} {}
+	FVector(float x, float y, float z) :v{x,y,z} {}
+	FVector(float num) :v{num} {}
 
 	FVector operator + (const FVector& v) const { return { X + v.X, Y + v.Y, Z + v.Z }; }
 	FVector operator - (const FVector& v) const { return { X - v.X, Y - v.Y, Z - v.Z }; }

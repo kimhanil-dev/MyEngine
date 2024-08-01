@@ -74,7 +74,7 @@ void fbx::LoadFBX(const char* path, uint id)
 
 		gMeshes.emplace(id, mesh);
 
-		PrintGood("Mesh(ID:%d) Loadded (Vertex : %d), (Index : %d)", id, mesh->VertexCount, mesh->IndexCount);
+		PrintGood("Mesh(ID:%d) Loadded (Vertex : %d), (Index : %d)", id, mesh->Vertices.size(), mesh->Indices.size());
 
 		scene->Destroy();
 	}

@@ -5,10 +5,11 @@
 struct Vertex
 {
 	FVector Position;
-	FVector Color = 1.0f;
+	FVector Color;
+	float U = 0.0f, V = 0.0f;
 	
-	Vertex() {}
-	Vertex(const FVector v, const FVector c) : Position(v), Color(c) {}
+	Vertex(){}
+	Vertex(const FVector v, const FVector c, float tu = 0.0f, float tv = 0.0f) : Position(v), Color(c), U(tu), V(tv) {}
 	Vertex(float x, float y, float z) : Position(x,y,z){}
 	Vertex(float num) : Position(num) {}
 };

@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "Matrix.h"
 
+#include "MathDefine.h"
 #include <math.h>
 
 void FMatrix4x4::Identity()
@@ -60,24 +61,31 @@ FMatrix4x4 Matrix::MakeTranslationMatrix(const FVector& v)
 	return result;
 }
 
-#define Radian(degree) degree * 3.1415926258 / 180
 FMatrix4x4 Matrix::MakeRotationMatrix(const FVector& r)
 {
-	FMatrix4x4 result;
-	result.Identity();
+	// rot x
+	FMatrix4x4 x;
+	x.Identity();
+	x.m22 = cosf(Radian(r.X));
+	x.m23 = -sinf(Radian(r.X));
+	x.m32 = sinf(Radian(r.X));
+	x.m33 = cosf(Radian(r.X));
+
+	// rot y
+	FMatrix4x4 y;
+	y.Identity();
+	y.m11 = cosf(Radian(r.Y));
+	y.m13 = -sinf(Radian(r.Y));
+	y.m31 = sinf(Radian(r.Y));
+	y.m33 = cosf(Radian(r.Y));
 
 	// rot z
-	result.m11 = cosf(Radian(r.Z));
-	result.m12 = -sinf(Radian(r.Z));
-	result.m22 = cos(Radian(r.Z));
-	result.m21 = sinf(Radian(r.Z));
+	FMatrix4x4 z;
+	z.Identity();
+	z.m11 = cosf(Radian(r.Z));
+	z.m12 = -sinf(Radian(r.Z));
+	z.m22 = cos(Radian(r.Z));
+	z.m21 = sinf(Radian(r.Z));
 
-	// rot x
-	result.m33 = cosf(Radian(-r.X));
-	result.m32 = -sinf(Radian(-r.X));
-	result.m22 = cos(Radian(r.X));
-	result.m23 = sinf(Radian(r.X));
-
-
-	return result;
+	return z * y * x;
 }

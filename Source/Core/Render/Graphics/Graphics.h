@@ -17,7 +17,6 @@
 using namespace std;
 using namespace DirectX;
 
-
 struct GeometryBuffers : public IGeometryModifier
 {
 	GeometryBuffers() : mWorld(XMMatrixIdentity()){}
@@ -28,12 +27,21 @@ struct GeometryBuffers : public IGeometryModifier
 	Microsoft::WRL::ComPtr<ID3D11Buffer> mIB;
 	
 	XMMATRIX						mWorld;
-	ID3DX11EffectMatrixVariable*	mWorldViewProj;
-	ID3DX11EffectTechnique*			mTech;
+	ID3DX11EffectMatrixVariable*	mWorldViewProj = nullptr;
+	ID3DX11EffectTechnique*			mTech = nullptr;
 
 	static Microsoft::WRL::ComPtr<ID3D11InputLayout> mIL;
 
-	virtual void SetTransform(const FMatrix4x4& worldTransMat)
+	virtual void SetFloat(const char* name, const float& value)
+	{
+		assert(mFX);
+
+		if (auto var = mFX->GetVariableByName(name))
+		{
+			var->AsScalar()->SetFloat(value);
+		}
+	}
+	virtual void SetTransform(const FMatrix4x4& worldTransMat) override
 	{
 		mWorld = XMMATRIX(worldTransMat.m);
 	}
@@ -51,7 +59,7 @@ private:
 	HRESULT BuildVertexLayout(GeometryBuffers& geometryBuffers);
 	HRESULT BuildFX(GeometryBuffers& outGeomtryBuffers);
 private:
-	std::vector<GeometryBuffers> mGeometries;
+	std::vector<shared_ptr<GeometryBuffers>> mGeometries;
 
 	HWND mhWnd = NULL;
 	unsigned int mWndClientWidth = 0;
@@ -67,6 +75,7 @@ private:
 	Microsoft::WRL::ComPtr<ID3D11DepthStencilView>	mDepthStencilView;
 	Microsoft::WRL::ComPtr<ID3D11Texture2D>			mDepthStencilTexture;
 	Microsoft::WRL::ComPtr<ID3D11DepthStencilState> mDepthStencilState;
+	ID3DX11EffectScalarVariable* mTime;
 
 	XMMATRIX mView;
 	XMMATRIX mProjection;
@@ -88,5 +97,5 @@ private:
 	uint CheckMultisampleQualityLevels(const DXGI_FORMAT format, const uint sampleCount);
 
 	// IGraphics을(를) 통해 상속됨
-	IGeometryModifier* BindMesh(Mesh* mesh) override;
+	weak_ptr<IGeometryModifier> BindMesh(Mesh* mesh) override;
 };

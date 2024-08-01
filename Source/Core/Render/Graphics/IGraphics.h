@@ -16,7 +16,7 @@ public:
 	virtual bool Init(const HWND& hWnd) = 0;
 	virtual void Render() = 0;
 	virtual void Release() = 0;
-	virtual IGeometryModifier* BindMesh(Mesh* mesh) = 0;
+	virtual weak_ptr<IGeometryModifier> BindMesh(Mesh* mesh) = 0;
 	
 	virtual void ResizeWindow(uint width, uint height) = 0;
 	virtual void AddObject(Object* object) = 0;

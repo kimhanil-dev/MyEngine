@@ -5,7 +5,6 @@
 
 #include "Core/Render/Mesh.h"
 #include "Utill/console.h"
-#include "Utill/frame.h"
 #include "Utill/D3DUtill.h"
 #include "UI/DebugUI.h"
 
@@ -15,6 +14,7 @@ struct SimpleVertex
 {
 	XMFLOAT3 Pos;
 	XMFLOAT4 Col;
+	XMFLOAT2 uv;
 };
 
 struct ConstantBuffer
@@ -58,9 +58,8 @@ void Graphics::ResizeWindow(uint width, uint height)
 	}
 	mD3DImmediateContext->OMSetRenderTargets(1, mRenderTargetView.GetAddressOf(), mDepthStencilView.Get());
 
-
 	// update viewport width, height
-	D3D11_VIEWPORT vp;
+	D3D11_VIEWPORT vp{};
 	vp.Width = (FLOAT)mWndClientWidth;
 	vp.Height = (FLOAT)mWndClientHeight;
 	vp.TopLeftX = 0.0f;
@@ -92,32 +91,32 @@ void Graphics::Render()
 	//*** set geomatry buffers
 	UINT stride = sizeof(SimpleVertex);
 	UINT offset = 0;
-	for (const GeometryBuffers buffers : mGeometries)
+	GeometryBuffers* buffers = nullptr;
+	size_t size = mGeometries.size();
+	for(int i = 0; i < size; ++i)
 	{
-		mD3DImmediateContext->IASetVertexBuffers(0, 1, buffers.mVB.GetAddressOf(), &stride, &offset);
-		mD3DImmediateContext->IASetIndexBuffer(buffers.mIB.Get(), DXGI_FORMAT_R32_UINT, 0);
+		buffers = mGeometries[i].get();
+
+		mD3DImmediateContext->IASetVertexBuffers(0, 1, buffers->mVB.GetAddressOf(), &stride, &offset);
+		mD3DImmediateContext->IASetIndexBuffer(buffers->mIB.Get(), DXGI_FORMAT_R32_UINT, 0);
 
 		// set pass's constant 
-		XMMATRIX MVP = buffers.mWorld * mView * mProjection;
-		buffers.mWorldViewProj->SetMatrix((float*)&MVP);
+		XMMATRIX MVP = buffers->mWorld * mView * mProjection;
+		buffers->mWorldViewProj->SetMatrix((float*)&MVP);
 
 		D3DX11_TECHNIQUE_DESC techDesc;
-		buffers.mTech->GetDesc(&techDesc);
+		buffers->mTech->GetDesc(&techDesc);
 		for (UINT iPass = 0; iPass < techDesc.Passes; ++iPass)
 		{
 			// update constant buffer
-			buffers.mTech->GetPassByIndex(iPass)->Apply(0, mD3DImmediateContext.Get());
+			buffers->mTech->GetPassByIndex(iPass)->Apply(0, mD3DImmediateContext.Get());
 
 			D3D11_BUFFER_DESC bd;
-			buffers.mIB->GetDesc(&bd);
+			buffers->mIB->GetDesc(&bd);
 			mD3DImmediateContext->DrawIndexed(bd.ByteWidth / sizeof(UINT), 0, 0);
 		}
 	}
 	
-	//*** imgui draw
-	DebugUI::SetData("FPS", GetFPS());
-	DebugUI::Render();
-
 	mSwapChain->Present(0, 0);
 }
 
@@ -276,51 +275,47 @@ HRESULT Graphics::BuildDevice()
 HRESULT Graphics::BuildGeometryBuffers(const Mesh* inMesh, GeometryBuffers& outGeomtryBuffers)
 {
 	assert(inMesh);
-	assert(inMesh->IndexCount != 0 || inMesh->VertexCount != 0);
 
 	// create vertex buffer
-	SimpleVertex* vertices = new SimpleVertex[inMesh->VertexCount];
+	UINT vertexCount = inMesh->Vertices.size();
+
+	vector<SimpleVertex> vertices;
+	vertices.resize(vertexCount);
+
+	const vector<Vertex>& meshVertices = inMesh->Vertices;
+	UINT index = 0;
+	for (const Vertex& v : meshVertices)
 	{
-		UINT vertexCount = inMesh->VertexCount;
-
-		FVector position;
-		FVector color;
-		for (UINT iVertex = 0; iVertex < vertexCount; ++iVertex)
-		{
-			position = inMesh->Vertices[iVertex].Position;
-			color = inMesh->Vertices[iVertex].Color;
-			vertices[iVertex].Pos = XMFLOAT3(position.X, position.Y, position.Z);
-			vertices[iVertex].Col = XMFLOAT4(color.X,color.Y,color.Z,1.0f);
-		}
-
-		D3D11_BUFFER_DESC bd{};
-		bd.Usage = D3D11_USAGE_IMMUTABLE;
-		bd.ByteWidth = sizeof(SimpleVertex) * vertexCount;
-		bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-		bd.CPUAccessFlags = 0;
-		bd.MiscFlags = 0;
-
-		D3D11_SUBRESOURCE_DATA initData{};
-		initData.pSysMem = vertices;
-
-		IF_FAILED_RET(mD3DDevice->CreateBuffer(&bd, &initData, outGeomtryBuffers.mVB.GetAddressOf()));
+		vertices[index].Pos = XMFLOAT3(v.Position.v);
+		vertices[index].Col = XMFLOAT4(v.Color.X, v.Color.Y, v.Color.Z, 1.0f);
+		vertices[index].uv = XMFLOAT2(v.U, v.V);
+		++index;
 	}
-	delete[] vertices;
+
+	D3D11_BUFFER_DESC bd{};
+	bd.Usage = D3D11_USAGE_IMMUTABLE;
+	bd.ByteWidth = sizeof(SimpleVertex) * vertexCount;
+	bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+	bd.CPUAccessFlags = 0;
+	bd.MiscFlags = 0;
+
+	D3D11_SUBRESOURCE_DATA initData{};
+	initData.pSysMem = vertices.data();
+
+	IF_FAILED_RET(mD3DDevice->CreateBuffer(&bd, &initData, outGeomtryBuffers.mVB.GetAddressOf()));
 
 	// create index buffer
-	assert(sizeof(uint) == sizeof(UINT));
-	UINT indexCount = inMesh->IndexCount;
-	UINT* indices = (UINT*)inMesh->Indices;
+	const vector<UINT>& indices = inMesh->Indices;
 
 	D3D11_BUFFER_DESC indexBufferDesc{};
 	indexBufferDesc.Usage = D3D11_USAGE_DEFAULT;
-	indexBufferDesc.ByteWidth = sizeof(UINT) * indexCount;// 36;
+	indexBufferDesc.ByteWidth = sizeof(UINT) * indices.size();// 36;
 	indexBufferDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
 	indexBufferDesc.CPUAccessFlags = 0;
 	indexBufferDesc.MiscFlags = 0;
 
 	D3D11_SUBRESOURCE_DATA initIndexData{};
-	initIndexData.pSysMem = inMesh->Indices;
+	initIndexData.pSysMem = indices.data();
 
 	IF_FAILED_RET(mD3DDevice->CreateBuffer(&indexBufferDesc, &initIndexData, outGeomtryBuffers.mIB.GetAddressOf()));
 
@@ -333,6 +328,7 @@ HRESULT Graphics::BuildVertexLayout(GeometryBuffers& geometryBuffers)
 	{
 		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 		{ "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 28, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 	};
 	uint numElements = ARRAYSIZE(layout);
 
@@ -393,20 +389,20 @@ uint Graphics::CheckMultisampleQualityLevels(const DXGI_FORMAT format, const uin
 	return result;
 }
 
-IGeometryModifier* Graphics::BindMesh(Mesh* mesh)
+weak_ptr<IGeometryModifier> Graphics::BindMesh(Mesh* mesh)
 {
 	assert(mesh);
 
-	GeometryBuffers& gbs = mGeometries.emplace_back();
-	BuildFX(gbs);
-	BuildGeometryBuffers(mesh, gbs);
+	auto gbs = mGeometries.emplace_back(new GeometryBuffers);
+	BuildFX(*gbs);
+	BuildGeometryBuffers(mesh, *gbs);
 	
 	if (!GeometryBuffers::mIL)
 	{
-		HR(BuildVertexLayout(gbs));
+		HR(BuildVertexLayout(*gbs));
 	}
 
-	return &gbs;
+	return gbs;
 }
 
 HRESULT Graphics::CreateDepthStencilView()

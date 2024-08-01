@@ -3,6 +3,7 @@
 
 #include "Core/Framwork/Application.h"
 #include "Core/Render/Graphics/GraphicsFactory.h"
+#include "Core/Render/Graphics/IGeometryModifier.h"
 
 class IGraphics;
 class IGeometryModifier;
@@ -24,7 +25,7 @@ protected:
     void LoadGame();
 
 private:
-    std::vector<IGeometryModifier*> mGeometryMods;
+    std::vector<weak_ptr<IGeometryModifier>> mGeometryMods;
 
     IGraphics* mRenderer;
     Renderer mRenderType = Renderer::DriectX;

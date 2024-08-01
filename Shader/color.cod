@@ -6,6 +6,7 @@
 cbuffer cbPerObject : register(b0)
 {
     float4x4 gWorldViewProj;            // Offset:    0, size:   64
+    float   gTime;                      // Offset:   64, size:    4
 }
 
 //
@@ -47,6 +48,7 @@ fxgroup
                 // {
                 //
                 //   float4x4 gWorldViewProj;           // Offset:    0 Size:    64
+                //   float gTime;                       // Offset:   64 Size:     4 [unused]
                 //
                 // }
                 //
@@ -65,6 +67,7 @@ fxgroup
                 // -------------------- ----- ------ -------- -------- ------- ------
                 // POSITION                 0   xyz         0     NONE   float   xyz 
                 // COLOR                    0   xyzw        1     NONE   float   xyzw
+                // TEXCOORD                 0   xy          2     NONE   float       
                 //
                 //
                 // Output signature:
@@ -86,10 +89,11 @@ fxgroup
                 // Initial variable locations:
                 //   v0.x <- PosL.x; v0.y <- PosL.y; v0.z <- PosL.z; 
                 //   v1.x <- Color.x; v1.y <- Color.y; v1.z <- Color.z; v1.w <- Color.w; 
+                //   v2.x <- uv.x; v2.y <- uv.y; 
                 //   o1.x <- <VS return value>.Color.x; o1.y <- <VS return value>.Color.y; o1.z <- <VS return value>.Color.z; o1.w <- <VS return value>.Color.w; 
                 //   o0.x <- <VS return value>.PosH.x; o0.y <- <VS return value>.PosH.y; o0.z <- <VS return value>.PosH.z; o0.w <- <VS return value>.PosH.w
                 //
-                #line 25 "D:\kimhanil\MyEngine\Shader\color.hlsl"
+                #line 31 "D:\kimhanil\MyEngine\Shader\color.hlsl"
                 mov r0.xyz, v0.xyzx
                 mov r0.w, l(1.000000)
                 dp4 r1.x, r0.xyzw, cb0[0].xyzw  // r1.x <- output.PosH.x
@@ -97,10 +101,10 @@ fxgroup
                 dp4 r1.z, r0.xyzw, cb0[2].xyzw  // r1.z <- output.PosH.z
                 dp4 r1.w, r0.xyzw, cb0[3].xyzw  // r1.w <- output.PosH.w
                 
-                #line 26
+                #line 32
                 mov r0.xyzw, v1.xyzw  // r0.x <- output.Color.x; r0.y <- output.Color.y; r0.z <- output.Color.z; r0.w <- output.Color.w
                 
-                #line 27
+                #line 33
                 mov o0.xyzw, r1.xyzw
                 mov o1.xyzw, r0.xyzw
                 ret 
@@ -137,13 +141,13 @@ fxgroup
                 //   v1.x <- input.Color.x; v1.y <- input.Color.y; v1.z <- input.Color.z; v1.w <- input.Color.w; 
                 //   o0.x <- <PS return value>.x; o0.y <- <PS return value>.y; o0.z <- <PS return value>.z; o0.w <- <PS return value>.w
                 //
-                #line 32 "D:\kimhanil\MyEngine\Shader\color.hlsl"
+                #line 38 "D:\kimhanil\MyEngine\Shader\color.hlsl"
                 mov o0.xyzw, v1.xyzw
                 ret 
                 // Approximately 2 instruction slots used
                             
             };
-            RasterizerState = WireFrameRS;
+            RasterizerState = SolidRS;
         }
 
     }

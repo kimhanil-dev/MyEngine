@@ -24,6 +24,8 @@ float GameTimer::TotalTime() const
 
 float GameTimer::GameTime() const
 {
+	// 구현해야 합니다.
+	assert(false);
 	return 0.0f;
 }
 

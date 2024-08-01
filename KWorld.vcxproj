@@ -153,6 +153,8 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="Source\Core\Math\MathDefine.h" />
+    <ClInclude Include="Source\Core\Render\GeometryGenerator.h" />
     <ClInclude Include="Source\Core\Render\Graphics\IGeometryModifier.h" />
     <ClInclude Include="Source\Core\Render\Mesh.h" />
     <ClInclude Include="Source\Game\Game.h" />
@@ -178,7 +180,6 @@
     <ClInclude Include="Source\Core\Framwork\Application.h" />
     <ClInclude Include="Source\Core\Object\Object.h" />
     <ClInclude Include="Source\Core\Types.h" />
-    <ClInclude Include="Source\Utill\frame.h" />
     <ClInclude Include="Source\Window\framework.h" />
     <ClInclude Include="Source\Window\IWinMsgListener.h" />
     <ClInclude Include="Source\Window\resource.h" />
@@ -188,6 +189,7 @@
     <ClInclude Include="pch.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Source\Core\Render\GeometryGenerator.cpp" />
     <ClCompile Include="Source\Core\Math\Matrix.cpp" />
     <ClCompile Include="Source\Game\Game.cpp" />
     <ClCompile Include="Source\Core\Framwork\Timer.cpp" />
@@ -233,7 +235,6 @@
     <ClCompile Include="Source\Core\Render\Graphics\Graphics.cpp" />
     <ClCompile Include="Source\Utill\fbx.cpp" />
     <ClCompile Include="Source\Core\Framwork\Application.cpp" />
-    <ClCompile Include="Source\Utill\frame.cpp" />
     <ClCompile Include="Source\Window\KWorld.cpp" />
     <ClCompile Include="Source\Core\Object\Object.cpp" />
     <ClCompile Include="Source\Core\Math\Vector.cpp" />
