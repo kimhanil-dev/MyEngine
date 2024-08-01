@@ -2,31 +2,30 @@
 
 #include <math.h>
 
-template <typename T>
-class Vector
+class FVector
 {
 public:
 	float X = 0.0f, Y = 0.0f, Z = 0.0f;
 
-	Vector(){}
-	Vector(float x, float y, float z) :X(x), Y(y), Z(z) {}
-	Vector(float num) :X(num), Y(num), Z(num) {}
+	FVector(){}
+	FVector(float x, float y, float z) :X(x), Y(y), Z(z) {}
+	FVector(float num) :X(num), Y(num), Z(num) {}
 
-	Vector<T> operator + (const Vector<T>& v) const { return { X + v.X, Y + v.Y, Z + v.Z }; }
-	Vector<T> operator - (const Vector<T>& v) const { return { X - v.X, Y - v.Y, Z - v.Z }; }
-	Vector<T> operator * (const Vector<T>& v) const { return { X * v.X, Y * v.Y, Z * v.Z }; }
-	Vector<T> operator * (const float f) const { return { X * f, Y * f, Z * f }; }
-	Vector<T> operator / (const float f) const { return { X / f, Y / f, Z / f }; }
-	Vector<T>& operator += (const Vector<T>& v) { X += v.X, Y += v.Y, Z += v.Z; return *this; }
-	Vector<T>& operator -= (const Vector<T>& v) { X -= v.X, Y -= v.Y, Z -= v.Z; return *this; }
-	Vector<T>& operator *= (const Vector<T>& v) { X *= v.X, Y *= v.Y, Z *= v.Z; return *this; }
-	Vector<T> operator  - () const { return { -X,-Y,-Z }; }
+	FVector operator + (const FVector& v) const { return { X + v.X, Y + v.Y, Z + v.Z }; }
+	FVector operator - (const FVector& v) const { return { X - v.X, Y - v.Y, Z - v.Z }; }
+	FVector operator * (const FVector& v) const { return { X * v.X, Y * v.Y, Z * v.Z }; }
+	FVector operator * (const float f) const { return { X * f, Y * f, Z * f }; }
+	FVector operator / (const float f) const { return { X / f, Y / f, Z / f }; }
+	FVector& operator += (const FVector& v) { X += v.X, Y += v.Y, Z += v.Z; return *this; }
+	FVector& operator -= (const FVector& v) { X -= v.X, Y -= v.Y, Z -= v.Z; return *this; }
+	FVector& operator *= (const FVector& v) { X *= v.X, Y *= v.Y, Z *= v.Z; return *this; }
+	FVector operator  - () const { return { -X,-Y,-Z }; }
 
-	Vector<T> Cross(const Vector<T>& v) const { return { Y * v.Z - Z * v.Y, Z * v.X - X * v.Z, X * v.Y - Y * v.X }; }
-	float Dot(const Vector<T>& v) const { return { X * v.X + Y * v.Y + Z * v.Z }; }
+	FVector Cross(const FVector& v) const { return { Y * v.Z - Z * v.Y, Z * v.X - X * v.Z, X * v.Y - Y * v.X }; }
+	float Dot(const FVector& v) const { return { X * v.X + Y * v.Y + Z * v.Z }; }
 	float Length2() const { return X * X + Y * Y + Z * Z; }
 	float Length() const { return sqrtf(X * X + Y * Y + Z * Z); }
-	Vector<T>& Normalize()
+	FVector& Normalize()
 	{
 		float invNor = 1 / Length();
 
@@ -39,4 +38,3 @@ public:
 
 };
 
-typedef Vector<float> FVector;

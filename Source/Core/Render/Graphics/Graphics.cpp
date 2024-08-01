@@ -9,6 +9,7 @@
 #include "Utill/D3DUtill.h"
 #include "UI/DebugUI.h"
 
+Microsoft::WRL::ComPtr<ID3D11InputLayout> GeometryBuffers::mIL = nullptr;
 
 struct SimpleVertex
 {
@@ -26,14 +27,15 @@ bool Graphics::Init(const HWND& hWnd)
 	mhWnd = hWnd;
 
 	HR(BuildDevice());
-	HR(BuildFX());
-	HR(BuildVertexLayout());
-	HR(BuildGeometryBuffers());
+
+	// move to BindMesh();
+		//HR(BuildFX());
+		//HR(BuildVertexLayout());
+		//HR(BuildGeometryBuffers());
 
 	//*** initialize matrices
-	mWorld = XMMatrixIdentity();
 	mView = XMMatrixLookAtLH({ 0.0f,1.0f,-5.0f,0.0f }, { 0.0f,1.0f,0.0f, 0.0f }, { 0.0f,1.0f,0.0f, 0.0f });
-	mProjection = XMMatrixPerspectiveFovLH(XM_PIDIV2, mWndClientWidth / (FLOAT)mWndClientHeight, 0.1f, 100.0f);
+	mProjection = XMMatrixPerspectiveFovLH(XM_PIDIV2, mWndClientWidth / (FLOAT)mWndClientHeight, 0.1f, 1000.0f);
 
 	DebugUI::Init(hWnd, mD3DDevice.Get(), mD3DImmediateContext.Get());
 
@@ -76,46 +78,42 @@ void Graphics::Render()
 	assert(mD3DImmediateContext);
 	assert(mSwapChain);
 
-	//*** Rotate cube
-	static float rotation = 0.0f;
-	mWorld = XMMatrixRotationY(rotation += 0.0001f);
-
 	//*** Clear back buffer
 	float clearColor[4] = { 0.0f, 0.125f, 0.6f, 1.0f }; //RGBA
 	mD3DImmediateContext->ClearRenderTargetView(mRenderTargetView.Get(), clearColor);
-	//mD3DImmediateContext->ClearDepthStencilView(mDepthStencilView.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
+	mD3DImmediateContext->ClearDepthStencilView(mDepthStencilView.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 
-	mD3DImmediateContext->IASetInputLayout(mInputLayout.Get());
+	if (GeometryBuffers::mIL == nullptr)
+		return;
+
+	mD3DImmediateContext->IASetInputLayout(GeometryBuffers::mIL.Get());
 	mD3DImmediateContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 	//*** set geomatry buffers
 	UINT stride = sizeof(SimpleVertex);
 	UINT offset = 0;
-	for (const GeometryBuffers& buffers : mGeometries)
+	for (const GeometryBuffers buffers : mGeometries)
 	{
 		mD3DImmediateContext->IASetVertexBuffers(0, 1, buffers.mVB.GetAddressOf(), &stride, &offset);
 		mD3DImmediateContext->IASetIndexBuffer(buffers.mIB.Get(), DXGI_FORMAT_R32_UINT, 0);
 
 		// set pass's constant 
-		XMMATRIX worldViewProj = mWorld * mView * mProjection;
-		buffers.mWorldViewProj->SetMatrix((float*)&worldViewProj);
+		XMMATRIX MVP = buffers.mWorld * mView * mProjection;
+		buffers.mWorldViewProj->SetMatrix((float*)&MVP);
 
 		D3DX11_TECHNIQUE_DESC techDesc;
-		mFXTech->GetDesc(&techDesc);
+		buffers.mTech->GetDesc(&techDesc);
 		for (UINT iPass = 0; iPass < techDesc.Passes; ++iPass)
 		{
 			// update constant buffer
-			mFXTech->GetPassByIndex(iPass)->Apply(0, mD3DImmediateContext.Get());
+			buffers.mTech->GetPassByIndex(iPass)->Apply(0, mD3DImmediateContext.Get());
 
-			//*** draw
-			// draw cube
-			mD3DImmediateContext->DrawIndexed(36, 0, 0);
-			// draw pyramid
-			mD3DImmediateContext->DrawIndexed(18, 36, 8);
+			D3D11_BUFFER_DESC bd;
+			buffers.mIB->GetDesc(&bd);
+			mD3DImmediateContext->DrawIndexed(bd.ByteWidth / sizeof(UINT), 0, 0);
 		}
 	}
 	
-
 	//*** imgui draw
 	DebugUI::SetData("FPS", GetFPS());
 	DebugUI::Render();
@@ -278,14 +276,16 @@ HRESULT Graphics::BuildDevice()
 HRESULT Graphics::BuildGeometryBuffers(const Mesh* inMesh, GeometryBuffers& outGeomtryBuffers)
 {
 	assert(inMesh);
-	assert(inMesh->IndexCount == 0 || inMesh->VertexCount == 0);
+	assert(inMesh->IndexCount != 0 || inMesh->VertexCount != 0);
 
 	// create vertex buffer
 	SimpleVertex* vertices = new SimpleVertex[inMesh->VertexCount];
 	{
+		UINT vertexCount = inMesh->VertexCount;
+
 		FVector position;
 		FVector color;
-		for (UINT iVertex = 0; iVertex < inMesh->VertexCount; ++iVertex)
+		for (UINT iVertex = 0; iVertex < vertexCount; ++iVertex)
 		{
 			position = inMesh->Vertices[iVertex].Position;
 			color = inMesh->Vertices[iVertex].Color;
@@ -295,7 +295,7 @@ HRESULT Graphics::BuildGeometryBuffers(const Mesh* inMesh, GeometryBuffers& outG
 
 		D3D11_BUFFER_DESC bd{};
 		bd.Usage = D3D11_USAGE_IMMUTABLE;
-		bd.ByteWidth = sizeof(vertices);
+		bd.ByteWidth = sizeof(SimpleVertex) * vertexCount;
 		bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
 		bd.CPUAccessFlags = 0;
 		bd.MiscFlags = 0;
@@ -312,16 +312,14 @@ HRESULT Graphics::BuildGeometryBuffers(const Mesh* inMesh, GeometryBuffers& outG
 	UINT indexCount = inMesh->IndexCount;
 	UINT* indices = (UINT*)inMesh->Indices;
 
-	D3D11_BUFFER_DESC indexBufferDesc;
-	ZeroMemory(&indexBufferDesc, sizeof(indexBufferDesc));
+	D3D11_BUFFER_DESC indexBufferDesc{};
 	indexBufferDesc.Usage = D3D11_USAGE_DEFAULT;
 	indexBufferDesc.ByteWidth = sizeof(UINT) * indexCount;// 36;
 	indexBufferDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
 	indexBufferDesc.CPUAccessFlags = 0;
 	indexBufferDesc.MiscFlags = 0;
 
-	D3D11_SUBRESOURCE_DATA initIndexData;
-	ZeroMemory(&initIndexData, sizeof(initIndexData));
+	D3D11_SUBRESOURCE_DATA initIndexData{};
 	initIndexData.pSysMem = inMesh->Indices;
 
 	IF_FAILED_RET(mD3DDevice->CreateBuffer(&indexBufferDesc, &initIndexData, outGeomtryBuffers.mIB.GetAddressOf()));
@@ -329,7 +327,7 @@ HRESULT Graphics::BuildGeometryBuffers(const Mesh* inMesh, GeometryBuffers& outG
 	return S_OK;
 }
 
-HRESULT Graphics::BuildVertexLayout()
+HRESULT Graphics::BuildVertexLayout(GeometryBuffers& geometryBuffers)
 {
 	D3D11_INPUT_ELEMENT_DESC layout[] =
 	{
@@ -339,9 +337,9 @@ HRESULT Graphics::BuildVertexLayout()
 	uint numElements = ARRAYSIZE(layout);
 
 	D3DX11_PASS_DESC passDesc;
-	mFXTech->GetPassByIndex(0)->GetDesc(&passDesc);
+	geometryBuffers.mTech->GetPassByIndex(0)->GetDesc(&passDesc);
 	IF_FAILED_RET(mD3DDevice->CreateInputLayout(layout, numElements, passDesc.pIAInputSignature,
-		passDesc.IAInputSignatureSize, mInputLayout.GetAddressOf()));
+		passDesc.IAInputSignatureSize, GeometryBuffers::mIL.GetAddressOf()));
 
 	return S_OK;
 }
@@ -395,10 +393,20 @@ uint Graphics::CheckMultisampleQualityLevels(const DXGI_FORMAT format, const uin
 	return result;
 }
 
-void Graphics::BindMesh(Mesh* mesh)
+IGeometryModifier* Graphics::BindMesh(Mesh* mesh)
 {
 	assert(mesh);
 
+	GeometryBuffers& gbs = mGeometries.emplace_back();
+	BuildFX(gbs);
+	BuildGeometryBuffers(mesh, gbs);
+	
+	if (!GeometryBuffers::mIL)
+	{
+		HR(BuildVertexLayout(gbs));
+	}
+
+	return &gbs;
 }
 
 HRESULT Graphics::CreateDepthStencilView()
@@ -434,7 +442,7 @@ HRESULT Graphics::CreateDepthStencilView()
 	depthStencilDesc.MiscFlags		= 0;
 
 	HR(mD3DDevice->CreateTexture2D(&depthStencilDesc, 0, mDepthStencilTexture.GetAddressOf()));
-	HR(mD3DDevice->CreateDepthStencilView(mDepthStencilTexture.Get(), 0, NULL));
+	HR(mD3DDevice->CreateDepthStencilView(mDepthStencilTexture.Get(), 0, mDepthStencilView.GetAddressOf()));
 
 	return hr;
 }

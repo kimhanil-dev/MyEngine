@@ -5,6 +5,7 @@
 #include "Core/Render/Graphics/GraphicsFactory.h"
 
 class IGraphics;
+class IGeometryModifier;
 class Object;
 
 class Game :
@@ -23,8 +24,9 @@ protected:
     void LoadGame();
 
 private:
+    std::vector<IGeometryModifier*> mGeometryMods;
 
-    IGraphics* mRenderers[(uint)Renderer::Count];
+    IGraphics* mRenderer;
     Renderer mRenderType = Renderer::DriectX;
 
     Object* mCamera = nullptr;

@@ -2,23 +2,41 @@
 
 #include "IGraphics.h"
 
+#include <vector>
+
 #include <d3d11.h>
 #include <d3dcompiler.h>
 #include <d3dx11effect.h>
 #include <DirectXMath.h>
 #include <wrl.h>
 
+#include "Core/Math/Matrix.h"
+#include "IGeometryModifier.h"
+
 
 using namespace std;
 using namespace DirectX;
 
-struct GeometryBuffers
+
+struct GeometryBuffers : public IGeometryModifier
 {
-	Microsoft::WRL::ComPtr<ID3DX11EffectMatrixVariable> mWorldViewProj;
-	Microsoft::WRL::ComPtr<ID3DX11EffectTechnique> mTech;
+	GeometryBuffers() : mWorld(XMMatrixIdentity()){}
+	virtual ~GeometryBuffers() {}
+
 	Microsoft::WRL::ComPtr<ID3DX11Effect> mFX;
 	Microsoft::WRL::ComPtr<ID3D11Buffer> mVB;
 	Microsoft::WRL::ComPtr<ID3D11Buffer> mIB;
+	
+	XMMATRIX						mWorld;
+	ID3DX11EffectMatrixVariable*	mWorldViewProj;
+	ID3DX11EffectTechnique*			mTech;
+
+	static Microsoft::WRL::ComPtr<ID3D11InputLayout> mIL;
+
+	virtual void SetTransform(const FMatrix4x4& worldTransMat)
+	{
+		mWorld = XMMATRIX(worldTransMat.m);
+	}
 };
 
 class Graphics : public IGraphics
@@ -30,7 +48,7 @@ public:
 private:
 	HRESULT BuildDevice();
 	HRESULT BuildGeometryBuffers(const Mesh* inMesh, GeometryBuffers& outGeomtryBuffers);
-	HRESULT BuildVertexLayout();
+	HRESULT BuildVertexLayout(GeometryBuffers& geometryBuffers);
 	HRESULT BuildFX(GeometryBuffers& outGeomtryBuffers);
 private:
 	std::vector<GeometryBuffers> mGeometries;
@@ -50,17 +68,8 @@ private:
 	Microsoft::WRL::ComPtr<ID3D11Texture2D>			mDepthStencilTexture;
 	Microsoft::WRL::ComPtr<ID3D11DepthStencilState> mDepthStencilState;
 
-	Microsoft::WRL::ComPtr<ID3D11InputLayout>	mInputLayout;
-	Microsoft::WRL::ComPtr<ID3D11Buffer>		mVertexBuffer;
-	Microsoft::WRL::ComPtr<ID3D11Buffer>		mIndexBuffer;
-	
-	XMMATRIX mWorld;
 	XMMATRIX mView;
 	XMMATRIX mProjection;
-
-	Microsoft::WRL::ComPtr<ID3DX11Effect>				mFX;
-	Microsoft::WRL::ComPtr<ID3DX11EffectTechnique>		mFXTech;
-	Microsoft::WRL::ComPtr<ID3DX11EffectMatrixVariable> mFXWorldViewProj;
 
 	// Inherited via IGraphics
 	void SetCamera(Object* object) override;
@@ -79,5 +88,5 @@ private:
 	uint CheckMultisampleQualityLevels(const DXGI_FORMAT format, const uint sampleCount);
 
 	// IGraphics을(를) 통해 상속됨
-	void BindMesh(Mesh* mesh) override;
+	IGeometryModifier* BindMesh(Mesh* mesh) override;
 };

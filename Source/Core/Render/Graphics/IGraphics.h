@@ -1,9 +1,14 @@
 #pragma once
 #include <Windows.h>
+#include <memory>
+
 #include "Core/Types.h"
 
 class Object;
-class Mesh;
+class IGeometryModifier;
+struct Mesh;
+
+using namespace std;
 
 class IGraphics
 {
@@ -11,7 +16,7 @@ public:
 	virtual bool Init(const HWND& hWnd) = 0;
 	virtual void Render() = 0;
 	virtual void Release() = 0;
-	virtual void BindMesh(Mesh* mesh) = 0;
+	virtual IGeometryModifier* BindMesh(Mesh* mesh) = 0;
 	
 	virtual void ResizeWindow(uint width, uint height) = 0;
 	virtual void AddObject(Object* object) = 0;

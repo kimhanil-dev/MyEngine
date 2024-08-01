@@ -747,6 +747,7 @@ bool GraphicsSW::IsInited()
 	return bIsInited;
 }
 
-void GraphicsSW::BindMesh(Mesh* mesh)
+IGeometryModifier* GraphicsSW::BindMesh(Mesh* mesh)
 {
+	return nullptr;
 }

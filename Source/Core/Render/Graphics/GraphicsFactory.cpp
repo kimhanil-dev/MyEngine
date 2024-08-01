@@ -2,7 +2,6 @@
 
 #include "GraphicsFactory.h"
 #include "Graphics.h"
-#include "GraphicsSW.h"
 
 IGraphics* GetRenderer(Renderer renderer)
 {
@@ -14,12 +13,12 @@ IGraphics* GetRenderer(Renderer renderer)
 		return &dx;
 	}
 	break;
-	case Renderer::Software:
+	/*case Renderer::Software:
 	{
 		static GraphicsSW sw;
 		return &sw;
 	}
-	break;
+	break;*/
 	default:
 		break;
 	}

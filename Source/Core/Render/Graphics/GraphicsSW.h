@@ -45,6 +45,6 @@ private:
 	bool IsInited() override;
 
 	// IGraphics을(를) 통해 상속됨
-	void BindMesh(Mesh* mesh) override;
+	IGeometryModifier* BindMesh(Mesh* mesh) override;
 };
 

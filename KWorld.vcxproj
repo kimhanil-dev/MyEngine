@@ -153,6 +153,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="Source\Core\Render\Graphics\IGeometryModifier.h" />
     <ClInclude Include="Source\Core\Render\Mesh.h" />
     <ClInclude Include="Source\Game\Game.h" />
     <ClInclude Include="Resource\resource.h" />
@@ -169,11 +170,8 @@
     <ClInclude Include="imgui\imstb_rectpack.h" />
     <ClInclude Include="imgui\imstb_textedit.h" />
     <ClInclude Include="imgui\imstb_truetype.h" />
-    <ClInclude Include="Source\Core\Math\Math.h" />
-    <ClInclude Include="Source\Core\Render\Graphics\GraphicsSW.h" />
     <ClInclude Include="Source\Core\Render\Graphics\IGraphics.h" />
     <ClInclude Include="Source\Core\Render\Graphics\Graphics.h" />
-    <ClInclude Include="Source\Core\Math\Plane.h" />
     <ClInclude Include="Source\Utill\console.h" />
     <ClInclude Include="Source\Utill\D3DUtill.h" />
     <ClInclude Include="Source\Utill\fbx.h" />
@@ -190,6 +188,7 @@
     <ClInclude Include="pch.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Source\Core\Math\Matrix.cpp" />
     <ClCompile Include="Source\Game\Game.cpp" />
     <ClCompile Include="Source\Core\Framwork\Timer.cpp" />
     <ClCompile Include="Source\Core\Input\InputManager.cpp" />
@@ -227,13 +226,10 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="Source\Core\Math\Math.cpp" />
     <ClCompile Include="Source\Core\Math\Matrix.h">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="Source\Core\Math\Plane.cpp" />
-    <ClCompile Include="Source\Core\Render\Graphics\GraphicsSW.cpp" />
     <ClCompile Include="Source\Core\Render\Graphics\Graphics.cpp" />
     <ClCompile Include="Source\Utill\fbx.cpp" />
     <ClCompile Include="Source\Core\Framwork\Application.cpp" />

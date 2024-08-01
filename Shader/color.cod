@@ -143,7 +143,7 @@ fxgroup
                 // Approximately 2 instruction slots used
                             
             };
-            RasterizerState = SolidRS;
+            RasterizerState = WireFrameRS;
         }
 
     }
