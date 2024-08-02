@@ -15,26 +15,26 @@ void FMatrix4x4::Identity()
 }
 
 #define Matrix(i, j, m1, m2)  m1.m##i##1 * m2.m##1##j + m1.m##i##2 * m2.m##2##j + m1.m##i##3 * m2.m##3##j + m1.m##i##4 * m2.m##4##j
-FMatrix4x4 FMatrix4x4::operator*(const FMatrix4x4& m2)
+FMatrix4x4 FMatrix4x4::operator*(const FMatrix4x4& m)
 {
 	FMatrix4x4 result;
 
-	result.m11 = Matrix(1, 1, (*this), m2);
-	result.m12 = Matrix(1, 2, (*this), m2);
-	result.m13 = Matrix(1, 3, (*this), m2);
-	result.m14 = Matrix(1, 4, (*this), m2);
-	result.m21 = Matrix(2, 1, (*this), m2);
-	result.m22 = Matrix(2, 2, (*this), m2);
-	result.m23 = Matrix(2, 3, (*this), m2);
-	result.m24 = Matrix(2, 4, (*this), m2);
-	result.m31 = Matrix(3, 1, (*this), m2);
-	result.m32 = Matrix(3, 2, (*this), m2);
-	result.m33 = Matrix(3, 3, (*this), m2);
-	result.m34 = Matrix(3, 4, (*this), m2);
-	result.m41 = Matrix(4, 1, (*this), m2);
-	result.m42 = Matrix(4, 2, (*this), m2);
-	result.m43 = Matrix(4, 3, (*this), m2);
-	result.m44 = Matrix(4, 4, (*this), m2);
+	result.m11 = Matrix(1, 1, (*this), m);
+	result.m12 = Matrix(1, 2, (*this), m);
+	result.m13 = Matrix(1, 3, (*this), m);
+	result.m14 = Matrix(1, 4, (*this), m);
+	result.m21 = Matrix(2, 1, (*this), m);
+	result.m22 = Matrix(2, 2, (*this), m);
+	result.m23 = Matrix(2, 3, (*this), m);
+	result.m24 = Matrix(2, 4, (*this), m);
+	result.m31 = Matrix(3, 1, (*this), m);
+	result.m32 = Matrix(3, 2, (*this), m);
+	result.m33 = Matrix(3, 3, (*this), m);
+	result.m34 = Matrix(3, 4, (*this), m);
+	result.m41 = Matrix(4, 1, (*this), m);
+	result.m42 = Matrix(4, 2, (*this), m);
+	result.m43 = Matrix(4, 3, (*this), m);
+	result.m44 = Matrix(4, 4, (*this), m);
 
 	return result;
 }

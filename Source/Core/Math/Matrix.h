@@ -17,7 +17,7 @@ struct FMatrix4x4
 
 	
 	void Identity();
-	FMatrix4x4 operator*(const FMatrix4x4& m2);
+	FMatrix4x4 operator*(const FMatrix4x4& m);
 	FVector operator*(const FVector& v);
 };
 

@@ -72,7 +72,7 @@ void Game::UpdateScene(float deltaTime)
 	static FMatrix4x4 transMat = Matrix::MakeTranslationMatrix({ 0.0f,0.0f ,100.0f });
 
 	rotation += rotateSpeed * deltaTime;
-	for (auto gm : mGeometryMods)
+	for (auto& gm : mGeometryMods)
 	{
 		if (gm.expired())
 		{
@@ -96,12 +96,10 @@ void Game::LoadGame()
 
 	// make Circle Geometry
 	Mesh cylinder;
-	geoGen.CreateCylinder(10.0f, 10.0f, 10.0f, 10, 10, cylinder);
+	geoGen.CreateCylinder(5.0f, 5.0f, 5.0f, 10, 10, cylinder);
 	auto mod = mRenderer->BindMesh(&cylinder);
 	if (!mod.expired())
 	{
-		mod.lock()->SetTransform(Matrix::MakeRTMatrix({ 0.0f, 0.0f ,0.0f } ,{ 0.0f,0.0f,10.0f }));
+		mod.lock()->SetTransform(Matrix::MakeRTMatrix({ 25.0f, 0.0f ,0.0f } ,{ 5.0f,0.0f,10.0f }));
 	}
-	
-
 }
