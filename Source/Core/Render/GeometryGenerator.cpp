@@ -53,6 +53,8 @@ void GeometryGenerator::CreateGrid(float width, float depth, UINT m, UINT n, Mes
 	}
 }
 
+// problem!!!
+// now vertices is CCW 
 void GeometryGenerator::CreateCylinder(const float topRadius, const float bottomRadius, const float height,
 	const UINT circleSeg, const UINT cylinderSeg, Mesh& outMesh)
 {
