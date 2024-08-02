@@ -41,7 +41,7 @@ float4 PS(PS_INPUT input) : SV_Target
 RasterizerState WireFrameRS
 {
     FillMode = Wireframe;
-    CullMode = Back;
+    CullMode = None;
     FrontCounterClockWise = false;
     // Default values used for any properties we do not set.
 };
@@ -60,6 +60,6 @@ technique11 ColorTech
     {
         SetVertexShader(CompileShader(vs_5_0, VS()));
         SetPixelShader(CompileShader(ps_5_0, PS()));
-        SetRasterizerState(SolidRS);
+        SetRasterizerState(WireFrameRS);
     }
 }

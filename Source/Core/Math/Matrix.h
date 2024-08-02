@@ -25,4 +25,5 @@ namespace Matrix
 {
 	FMatrix4x4 MakeTranslationMatrix(const FVector& v);
 	FMatrix4x4 MakeRotationMatrix(const FVector& r);
+	FMatrix4x4 MakeRTMatrix(const FVector& r, const FVector t);
 }

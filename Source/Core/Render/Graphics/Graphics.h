@@ -81,7 +81,7 @@ private:
 	XMMATRIX mProjection;
 
 	// Inherited via IGraphics
-	void SetCamera(Object* object) override;
+	void SetView(FMatrix4x4 viewMatrix) override;
 	virtual void AddObject(Object* object) override;
 
 	bool bIsInited = false;

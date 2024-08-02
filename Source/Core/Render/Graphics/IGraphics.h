@@ -2,6 +2,7 @@
 #include <Windows.h>
 #include <memory>
 
+#include "Core/Math/Matrix.h"
 #include "Core/Types.h"
 
 class Object;
@@ -20,7 +21,7 @@ public:
 	
 	virtual void ResizeWindow(uint width, uint height) = 0;
 	virtual void AddObject(Object* object) = 0;
-	virtual void SetCamera(Object* object) = 0;
+	virtual void SetView(FMatrix4x4 viewMatrix) = 0;
 
 	virtual bool IsInited() = 0;
 };

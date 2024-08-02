@@ -125,8 +125,9 @@ void Graphics::Release()
 	DebugUI::Release();
 }
 
-void Graphics::SetCamera(Object* object)
+void Graphics::SetView(FMatrix4x4 viewMatrix)
 {
+	mView = XMMATRIX(viewMatrix.m);
 }
 
 void Graphics::AddObject(Object* object)
@@ -277,7 +278,7 @@ HRESULT Graphics::BuildGeometryBuffers(const Mesh* inMesh, GeometryBuffers& outG
 	assert(inMesh);
 
 	// create vertex buffer
-	UINT vertexCount = inMesh->Vertices.size();
+	UINT vertexCount = static_cast<UINT>(inMesh->Vertices.size());
 
 	vector<SimpleVertex> vertices;
 	vertices.resize(vertexCount);
@@ -309,7 +310,7 @@ HRESULT Graphics::BuildGeometryBuffers(const Mesh* inMesh, GeometryBuffers& outG
 
 	D3D11_BUFFER_DESC indexBufferDesc{};
 	indexBufferDesc.Usage = D3D11_USAGE_DEFAULT;
-	indexBufferDesc.ByteWidth = sizeof(UINT) * indices.size();// 36;
+	indexBufferDesc.ByteWidth = sizeof(UINT) * static_cast<UINT>(indices.size());// 36;
 	indexBufferDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
 	indexBufferDesc.CPUAccessFlags = 0;
 	indexBufferDesc.MiscFlags = 0;

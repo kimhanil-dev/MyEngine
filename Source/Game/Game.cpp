@@ -17,7 +17,6 @@ Game::Game(HINSTANCE hAppInst)
 	:Application(hAppInst),
 	mRenderer(GetRenderer(Renderer::DriectX))
 {
-
 }
 
 Game::~Game()
@@ -89,17 +88,20 @@ void Game::LoadGame()
 
 	mInputManager->BindInput(VK_F1, InputManager::KeyState::Down, [this](unsigned int key, InputManager::KeyState state) {mCurrState = State::Destroy, SendMessage(mhMainWnd, WM_CLOSE, NULL, NULL); });
 	mInputManager->BindInput(VK_F2, InputManager::KeyState::Down, [this](unsigned int key, InputManager::KeyState state) {mCurrState = mCurrState == State::Pause ? State::Idle : State::Pause; });
+	mInputManager->BindInput(VK_LEFT, InputManager::KeyState::Down, [this](unsigned int key, InputManager::KeyState state) {mCurrState = mCurrState == State::Pause ? State::Idle : State::Pause; });
 
-	mGeometryMods.emplace_back(mRenderer->BindMesh(fbx::GetMesh(1)));
+	//mGeometryMods.emplace_back(mRenderer->BindMesh(fbx::GetMesh(1)));
 
 	GeometryGenerator geoGen;
-	Mesh gridMesh;
-	geoGen.CreateGrid(160.0f, 160.0f, 50, 50, gridMesh);
-	auto mod = mRenderer->BindMesh(&gridMesh);
-	if (mod.expired())
+
+	// make Circle Geometry
+	Mesh cylinder;
+	geoGen.CreateCylinder(10.0f, 10.0f, 10.0f, 10, 10, cylinder);
+	auto mod = mRenderer->BindMesh(&cylinder);
+	if (!mod.expired())
 	{
-		mod.lock()->SetTransform(Matrix::MakeTranslationMatrix({ 0.0f,-50.0f,150.0f }));
-		mGeometryMods.push_back(mod);
+		mod.lock()->SetTransform(Matrix::MakeRTMatrix({ 0.0f, 0.0f ,0.0f } ,{ 0.0f,0.0f,10.0f }));
 	}
+	
 
 }

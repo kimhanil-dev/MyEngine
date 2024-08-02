@@ -89,3 +89,8 @@ FMatrix4x4 Matrix::MakeRotationMatrix(const FVector& r)
 
 	return z * y * x;
 }
+
+FMatrix4x4 Matrix::MakeRTMatrix(const FVector& r, const FVector t)
+{
+	return (MakeRotationMatrix(r) * MakeTranslationMatrix(t));
+}
