@@ -66,26 +66,26 @@ FMatrix4x4 Matrix::MakeRotationMatrix(const FVector& r)
 	// rot x
 	FMatrix4x4 x;
 	x.Identity();
-	x.m22 = cosf(Radian(r.X));
-	x.m23 = -sinf(Radian(r.X));
-	x.m32 = sinf(Radian(r.X));
-	x.m33 = cosf(Radian(r.X));
+	x.m22 = cosf(RadianF(r.X));
+	x.m23 = -sinf(RadianF(r.X));
+	x.m32 = sinf(RadianF(r.X));
+	x.m33 = cosf(RadianF(r.X));
 
 	// rot y
 	FMatrix4x4 y;
 	y.Identity();
-	y.m11 = cosf(Radian(r.Y));
-	y.m13 = -sinf(Radian(r.Y));
-	y.m31 = sinf(Radian(r.Y));
-	y.m33 = cosf(Radian(r.Y));
+	y.m11 = cosf(RadianF(r.Y));
+	y.m13 = -sinf(RadianF(r.Y));
+	y.m31 = sinf(RadianF(r.Y));
+	y.m33 = cosf(RadianF(r.Y));
 
 	// rot z
 	FMatrix4x4 z;
 	z.Identity();
-	z.m11 = cosf(Radian(r.Z));
-	z.m12 = -sinf(Radian(r.Z));
-	z.m22 = cos(Radian(r.Z));
-	z.m21 = sinf(Radian(r.Z));
+	z.m11 = cosf(RadianF(r.Z));
+	z.m12 = -sinf(RadianF(r.Z));
+	z.m22 = cos(RadianF(r.Z));
+	z.m21 = sinf(RadianF(r.Z));
 
 	return z * y * x;
 }

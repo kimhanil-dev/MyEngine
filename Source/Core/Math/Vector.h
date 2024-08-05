@@ -26,6 +26,7 @@ public:
 	FVector& operator += (const FVector& v) { X += v.X, Y += v.Y, Z += v.Z; return *this; }
 	FVector& operator -= (const FVector& v) { X -= v.X, Y -= v.Y, Z -= v.Z; return *this; }
 	FVector& operator *= (const FVector& v) { X *= v.X, Y *= v.Y, Z *= v.Z; return *this; }
+	FVector& operator *= (const float& f) { X *= f, Y *= f, Z *= f; return *this; }
 	FVector operator  - () const { return { -X,-Y,-Z }; }
 
 	FVector Cross(const FVector& v) const { return { Y * v.Z - Z * v.Y, Z * v.X - X * v.Z, X * v.Y - Y * v.X }; }

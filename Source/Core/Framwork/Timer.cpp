@@ -95,3 +95,16 @@ void GameTimer::Tick()
 		mDeltaTime = 0.0;
 	}
 }
+
+void GameTimer::StartPerformance()
+{
+	QueryPerformanceCounter((LARGE_INTEGER*)&mPerformanceStart);
+}
+
+float GameTimer::EndPerformance()
+{
+	int64 currTime;
+	QueryPerformanceCounter((LARGE_INTEGER*)&currTime);
+
+	return static_cast<float>((currTime - mPerformanceStart) * mSecondsPerCount);
+}

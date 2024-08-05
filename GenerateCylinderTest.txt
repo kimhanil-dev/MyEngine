@@ -1,0 +1,9 @@
+Copy: Count: 3,  Avg : 0.290632
+Move: Count: 3,  Avg : 0.251994
+Extern Ref: Count: 3,  Avg : 0.2549481
+NRVO: Count: 3,  Avg : 0.2526454
+
+Copy: Count: 100,  Avg : 9.4288461
+Move: Count: 100,  Avg : 8.167627099999999
+Extern Ref: Count: 100,  Avg : 8.303978300000004
+NRVO: Count: 100,  Avg : 8.236591000000002

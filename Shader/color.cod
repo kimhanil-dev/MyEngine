@@ -15,7 +15,7 @@ cbuffer cbPerObject : register(b0)
 RasterizerState WireFrameRS
 {
     FillMode = uint(WIREFRAME /* 2 */);
-    CullMode = uint(BACK /* 3 */);
+    CullMode = uint(NONE /* 1 */);
     FrontCounterClockwise = bool(FALSE /* false */);
 };
 RasterizerState SolidRS

@@ -6,9 +6,12 @@ class GeometryGenerator
 public:
 
 	void CreateGrid(float width, float depth, UINT m, UINT n, Mesh& outMesh);
+
 	void CreateCylinder(const float topRadius, const float bottomRadius, const float height, 
 		const UINT circleSeg, const UINT cylinderSeg, Mesh& outMesh);				
 
-	void CreateCircle(Mesh& outMesh, const float radius, const UINT segment);
+	void CreateSphere(const float radius, UINT segment, Mesh& outMesh);
+
+	void CreateCircle(Mesh& outMesh, const float radius, const UINT segment, bool isCenterAtStart = false);
 };
 

@@ -15,6 +15,14 @@ public:
 	void Stop();
 	void Start();	// call when unpaused.
 	void Tick();	// call every frame.
+
+	// 성능 측정을 위한 유틸함수 입니다.
+	// StartPerformance() 호출
+	// 작업...
+	// EndPerformance()
+	// 위의 형태로 사용합니다.
+	void StartPerformance();
+	float EndPerformance();
 private:
 	double mSecondsPerCount;
 	double mDeltaTime;
@@ -24,4 +32,6 @@ private:
 	int64 mPrevTime;
 	int64 mCurrTime;
 	bool mbStopped;
+
+	int64 mPerformanceStart;
 };

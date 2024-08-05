@@ -41,7 +41,7 @@ float4 PS(PS_INPUT input) : SV_Target
 RasterizerState WireFrameRS
 {
     FillMode = Wireframe;
-    CullMode = Back;
+    CullMode = None;
     FrontCounterClockWise = false;
     // Default values used for any properties we do not set.
 };
