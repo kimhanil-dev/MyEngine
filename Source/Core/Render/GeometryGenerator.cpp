@@ -1,7 +1,6 @@
 #include "pch.h"
 #include "GeometryGenerator.h"
 
-#include "Core/Math/MathDefine.h"
 #include <math.h>
 #include <algorithm>
 
@@ -27,10 +26,9 @@ void GeometryGenerator::CreateGrid(float width, float depth, UINT m, UINT n, Mes
 		{
 			float x = -halfWidth + k * dx;
 			UINT index = i * n + k;
-			outMesh.Vertices[index].Position = { x, 0.0f, z };
-			outMesh.Vertices[index].Color = { 1.0f,1.0f,1.0f };
-			outMesh.Vertices[index].U = k * du;
-			outMesh.Vertices[index].V = i * dv;
+			outMesh.Vertices[index].Position = XMFLOAT3(x, 0.0f, z);
+			outMesh.Vertices[index].Color = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+			outMesh.Vertices[index].UV = XMFLOAT2(k * du, i * dv);
 		}
 	}
 
@@ -84,7 +82,7 @@ void GeometryGenerator::CreateCylinder(const float topRadius, const float bottom
 
 	// merge를 위해 bottom의 index를 변형하고, topMesh vertices를 height만큼 높입니다.
 	UINT bcIndexBias = tcVtxCount + cyVtxCount;
-	std::ranges::for_each(topMesh.Vertices, [height](Vertex& vertex) { vertex.Position.Y += height; }); // add height
+	std::ranges::for_each(topMesh.Vertices, [height](Vertex& vertex) { vertex.Position.y += height; }); // add height
 	std::ranges::for_each(bottomMesh.Indices, [bcIndexBias](UINT& index) { index += bcIndexBias; }); // add index bias
 
 	// concat top, cylinder, bottom vertices
@@ -105,14 +103,14 @@ void GeometryGenerator::CreateCylinder(const float topRadius, const float bottom
 	float dCySeg = 1.0f / (cylinderSeg - 1);
 
 	// prepare xz lerp
-	vector<FVector> dists;
-	vector<FVector> froms;
+	vector<XMVECTOR> dists;
+	vector<XMVECTOR> froms;
 	froms.resize(circleSeg);
 	dists.resize(circleSeg);
 	for (UINT iCSeg = 0; iCSeg < circleSeg; ++iCSeg)
 	{
-		FVector vFrom = topMesh.Vertices[iCSeg + topCircleCenterVtxBias].Position;
-		FVector vTo = bottomMesh.Vertices[iCSeg].Position;
+		XMVECTOR vFrom = XMLoadFloat3(&topMesh.Vertices[iCSeg + topCircleCenterVtxBias].Position);
+		XMVECTOR vTo = XMLoadFloat3(&bottomMesh.Vertices[iCSeg].Position);
 
 		dists[iCSeg] = vTo - vFrom;
 		froms[iCSeg] = vFrom + (dists[iCSeg] * dCySeg); // cylinder calculation starts at 1 segment index so the interpolation starts after the first step
@@ -128,12 +126,12 @@ void GeometryGenerator::CreateCylinder(const float topRadius, const float bottom
 		for (UINT iCSeg = 0; iCSeg < circleSeg; ++iCSeg)
 		{
 			// set vertex
-			FVector cyPos{};
-			cyPos.X = froms[iCSeg].X + dists[iCSeg].X * iCySeg * dCySeg;
-			cyPos.Z = froms[iCSeg].Z + dists[iCSeg].Z * iCySeg * dCySeg;
-			cyPos.Y = cyY;
+			XMVECTOR cyPos{};
+			cyPos = froms[iCSeg] + dists[iCSeg] * (float)iCySeg * dCySeg;
+			cyPos.m128_f32[3] = cyY;
 
-			cylinderMesh.Vertices[iCyVtxStart + (iCySeg * circleSeg) + iCSeg].Position = cyPos;
+			UINT index = iCyVtxStart + (iCySeg * circleSeg) + iCSeg;
+			XMStoreFloat3(&cylinderMesh.Vertices[index].Position, cyPos);
 		}
 	}
 
@@ -179,105 +177,210 @@ void GeometryGenerator::CreateCylinder(const float topRadius, const float bottom
 	outMesh = move(cylinderMesh);
 }
 
-void GeometryGenerator::CreateSphere(const float radius, UINT segment, Mesh& outMesh)
+void GeometryGenerator::CreateGeosphere(const XMFLOAT4& color, float radius, UINT numSubdivisions, Mesh& outMesh)
 {
-	UINT vertexCount = segment * segment * 0.5f - segment + 2;
-	UINT face = (segment - 2) * segment;
-	UINT indexCount = face * 3;
-	outMesh.Vertices.resize(vertexCount);
-	outMesh.Indices.resize(indexCount);
+	const float x = 0.525731f;
+	const float z = 0.850651f;
 
-	float dAngle = RadianF(360.0f) / segment;
+	const size_t vtxCount = 12;
 
-	UINT ySegNum = segment * 0.5f - 1;
+	vector<XMFLOAT3> vtxPoses = {
+		{-x,0.0f,z},{x,0.0f,z},
+		{-x,0.0f,-z},{x,0.0f,-z},
+		{0.0f,z,x}, {0.0f,z,-x},
+		{0.0f,-z,x},{0.0f,-z,-x},
+		{z,x,0.0f}, {-z,x,0.0f},
+		{z,-x,0.0f},{-z,-x,0.0f},
+	};
 
-	vector<float> yPoses;
-	yPoses.resize(ySegNum);
-	vector<float> ratios;
-	ratios.resize(ySegNum);
-
-	for (int i = 0; i < ySegNum; ++i)
+	outMesh.Vertices.reserve(vtxCount);
+	for (size_t i = 0; i < vtxCount; ++i)
 	{
-		yPoses[i] = (cosf((i + 1)* dAngle));
-		ratios[i] = (sinf((i + 1)* dAngle));
+		outMesh.Vertices.push_back({ vtxPoses[i],color});
 	}
 
-	// vertex
-	UINT index = 0;
-	UINT vtxRowPos = 0;
-	UINT vtxNextRowPos = 0;
+	outMesh.Indices = {
+		1,4,0, 4,9,0, 4,5,9, 8,5,4, 1,8,4,
+		1,10,8, 10,3,8, 8,3,5, 3,2,5, 3,7,2,
+		3,10,7, 10,6,7, 6,11,7, 6,0,11, 6,1,0,
+		10,1,6, 11,0,9, 2,11,9, 5,2,9, 11,2,7
+	};
 
-	float xzAngle = 0.0f;
-	for (UINT i = 0; i < segment; ++i)
+	// calculate normal
+	for (Vertex& v : outMesh.Vertices)
 	{
-		float x = cosf(xzAngle);
-		float z = sinf(xzAngle);
+		XMVECTOR vSIMD = XMLoadFloat3(&v.Position);
+		XMVECTOR n = XMVector3Normalize(vSIMD);
 
-		// ignore top, bottom vertex
-		vtxRowPos = i * ySegNum;
-		vtxNextRowPos = vtxRowPos + ySegNum;
-		for (UINT k = 0; k < ySegNum; ++k)
-		{
-			//vertex
-			FVector pos = FVector(x * ratios[k], yPoses[k], z * ratios[k]);
-			pos *= radius;
-
-			outMesh.Vertices[i * ySegNum + k].Position = pos;
-			outMesh.Vertices[i * ySegNum + k].Color = { 1.0f,1.0,1.0f };
-		}
-
-		xzAngle += dAngle;
+		XMStoreFloat3(&v.Normal, n);
 	}
 
-	for (UINT i = 0; i < segment - 1; ++i)
+	for (UINT i = 0; i < numSubdivisions; ++i)
 	{
-		vtxRowPos = i * ySegNum;
-		vtxNextRowPos = vtxRowPos + ySegNum;
-		for (UINT k = 0; k < segment / 4; ++k)
-		{
-			// index
-			outMesh.Indices[index] = vtxRowPos + k;
-			outMesh.Indices[index + 1] = vtxNextRowPos + k;
-			outMesh.Indices[index + 2] = vtxRowPos + k + 1;
-
-			outMesh.Indices[index + 3] = vtxRowPos + k + 1;
-			outMesh.Indices[index + 4] = vtxNextRowPos + k;
-			outMesh.Indices[index + 5] = vtxNextRowPos + k + 1;
-			index += 6;
-		}
+		Subdivide(outMesh);
 	}
 
-	//top
-	outMesh.Vertices[vertexCount - 2].Position = FVector(0.0f, radius, 0.0f);
-	for (UINT i = 0; i < segment - 1; ++i)
+	// make sphere (normalized position * radius)
+	for (Vertex& v : outMesh.Vertices)
 	{
-		// index
-		outMesh.Indices[index] = vertexCount - 2;
-		outMesh.Indices[index + 1] = (i + 1) * ySegNum;
-		outMesh.Indices[index + 2] = i * ySegNum;
+		XMVECTOR vSIMD = XMLoadFloat3(&v.Position);
+		XMVECTOR n = XMVector3Normalize(vSIMD);
 
-		index += 3;
-	}
-
-	//bottom
-	outMesh.Vertices[vertexCount - 1].Position = FVector(0.0f, -radius, 0.0f);
-	for (UINT i = 0; i < segment - 1; ++i)
-	{
-		// index
-		outMesh.Indices[index] = vertexCount - 1;
-		outMesh.Indices[index + 1] = (i + 1) * ySegNum + (ySegNum - 1);
-		outMesh.Indices[index + 2] = i * ySegNum + (ySegNum - 1);
-
-		index += 3;
+		XMStoreFloat3(&v.Position, n * radius);
 	}
 }
+
+
+static void Interpolate(const Vertex& from, const Vertex& to, float delta, Vertex& out)
+{
+	XMVECTOR fromPos = XMLoadFloat3(&from.Position);
+	XMVECTOR toPos = XMLoadFloat3(&to.Position);
+	XMVECTOR pos = fromPos + (toPos - fromPos) * delta;
+
+	XMVECTOR fromColor = XMLoadFloat4(&from.Color);
+	XMVECTOR toColor = XMLoadFloat4(&to.Color);
+	XMVECTOR color = (fromColor * (1.0f - delta)) + (toColor * (delta));
+
+	XMVECTOR fromNormal = XMLoadFloat3(&from.Normal);
+	XMVECTOR toNormal = XMLoadFloat3(&to.Normal);
+	XMVECTOR normal = (fromNormal * (1.0f - delta)) + (toNormal * (delta));
+	normal = XMVector3Normalize(normal);
+
+	XMStoreFloat3(&out.Position, pos);
+	XMStoreFloat4(&out.Color, color);
+	XMStoreFloat3(&out.Normal, normal);
+}
+
+void GeometryGenerator::Subdivide(Mesh& outMesh)
+{
+	UINT prevFaceCount = (UINT)outMesh.Indices.size() / 3;
+	UINT faceCount = prevFaceCount * 4;	// 1개의 페이스는 4개의 페이스로 분리됨
+	UINT vertexCount = prevFaceCount * 3 * 2;	 // 기존 face당 3개 증가
+
+	vector<Vertex> subVertices;
+	subVertices.resize(vertexCount);
+
+	vector<UINT> subIndices;
+	subIndices.reserve(faceCount * 3);
+
+	UINT index = 0;
+	UINT vtxIndex = 0;
+	UINT subIndex = 0;
+	for (UINT iFace = 0; iFace < prevFaceCount; ++iFace)
+	{
+		// get tri vertices
+		index = iFace * 3;
+
+		Vertex vtx0 = outMesh.Vertices[outMesh.Indices[index]];
+		Vertex vtx1 = outMesh.Vertices[outMesh.Indices[index + 1]];
+		Vertex vtx2 = outMesh.Vertices[outMesh.Indices[index + 2]];
+
+		subIndex = iFace * 6;
+
+		subVertices[subIndex] = vtx0;
+		subVertices[subIndex + 2] = vtx1;
+		subVertices[subIndex + 4] = vtx2;
+		Interpolate(vtx0, vtx1, 0.5f, subVertices[subIndex + 1]);
+		Interpolate(vtx1, vtx2, 0.5f, subVertices[subIndex + 3]);
+		Interpolate(vtx2, vtx0, 0.5f, subVertices[subIndex + 5]);
+
+		subIndices.push_back(subIndex);
+		subIndices.push_back(subIndex + 1);
+		subIndices.push_back(subIndex + 5);
+
+		subIndices.push_back(subIndex + 5);
+		subIndices.push_back(subIndex + 3);
+		subIndices.push_back(subIndex + 4);
+
+		subIndices.push_back(subIndex + 5);
+		subIndices.push_back(subIndex + 1);
+		subIndices.push_back(subIndex + 3);
+
+		subIndices.push_back(subIndex + 1);
+		subIndices.push_back(subIndex + 2);
+		subIndices.push_back(subIndex + 3);
+	}
+
+	outMesh.Vertices = move(subVertices);
+	outMesh.Indices = move(subIndices);
+}
+//
+//void GeometryGenerator::Subdivide(Mesh& outMesh)
+//{
+//	UINT prevFaceCount = (UINT)outMesh.Indices.size() / 3;
+//	UINT faceCount = prevFaceCount * 4;	// 1개의 페이스는 4개의 페이스로 분리됨
+//	UINT vertexCount = prevFaceCount * 3;	 // 기존 face당 3개 증가
+//
+//	vector<XMVECTOR> subVertices;
+//	subVertices.reserve(vertexCount);
+//
+//	vector<UINT> subIndices;
+//	subIndices.reserve(faceCount * 3);
+//
+//	XMVECTOR vm0, vm1, vm2;
+//	XMVECTOR v0, v1, v2;
+//	UINT index = 0;
+//	UINT subIndex = 0;
+//	for (UINT iFace = 0; iFace < prevFaceCount; ++iFace)
+//	{
+//		// get tri vertices
+//		index = iFace * 3;
+//		v0 = XMLoadFloat3(&outMesh.Vertices[outMesh.Indices[index]].Position);
+//		v1 = XMLoadFloat3(&outMesh.Vertices[outMesh.Indices[index + 1]].Position);
+//		v2 = XMLoadFloat3(&outMesh.Vertices[outMesh.Indices[index + 2]].Position);
+//
+//		// calculate middle vertex position
+//		vm0 = v0 + (v1 - v0) * 0.5f;
+//		vm1 = v1 + (v2 - v1) * 0.5f;
+//		vm2 = v2 + (v0 - v2) * 0.5f;
+//
+//		// make sub triangles
+//		subVertices.push_back(v0);
+//		subVertices.push_back(vm0);
+//		subVertices.push_back(v1);
+//		subVertices.push_back(vm1);
+//		subVertices.push_back(v2);
+//		subVertices.push_back(vm2);
+//
+//		subIndex = iFace * 6;
+//		subIndices.push_back(subIndex);
+//		subIndices.push_back(subIndex + 1);
+//		subIndices.push_back(subIndex + 5);
+//
+//		subIndices.push_back(subIndex + 5);
+//		subIndices.push_back(subIndex + 3);
+//		subIndices.push_back(subIndex + 4);
+//
+//		subIndices.push_back(subIndex + 5);
+//		subIndices.push_back(subIndex + 1);
+//		subIndices.push_back(subIndex + 3);
+//
+//		subIndices.push_back(subIndex + 1);
+//		subIndices.push_back(subIndex + 2);
+//		subIndices.push_back(subIndex + 3);
+//	}
+//
+//
+//	// set outMesh
+//	size_t vtxBufferSize = subVertices.size();
+//	outMesh.Vertices.resize(vtxBufferSize);
+//	for (size_t i = 0; i < vtxBufferSize; ++i)
+//	{
+//		XMStoreFloat3(&outMesh.Vertices[i].Position, subVertices[i]);
+//	}
+//
+//	outMesh.Indices = move(subIndices);
+//}
 
 void GeometryGenerator::CreateCircle(Mesh& outMesh, float radius, UINT segment, bool isCenterAtStart)
 {
 	assert(segment >= 3);
 
 	UINT vertexCount = segment + 1;
-	float dRadian = RadianF(360.0f / segment);
+	
+	float dRadian = XM_2PI / segment;
+
+	//float dRadian = RadianF(360.0f / segment);
 	outMesh.Vertices.resize(vertexCount);
 
 	UINT index = 0;
@@ -297,12 +400,12 @@ void GeometryGenerator::CreateCircle(Mesh& outMesh, float radius, UINT segment, 
 		segEnd = vertexCount;
 	}
 
-	outMesh.Vertices[centerIndex] = Vertex(FVector(0.0f), FVector(1.0f, 1.0f, 1.0f));
+	outMesh.Vertices[centerIndex] = Vertex({0.0f,0.0f,0.0f});
 	for (UINT iSeg = segStart; iSeg < segEnd; ++iSeg)
 	{
 		// calculate vertex
 		float radian = dRadian * (iSeg - segStart);
-		outMesh.Vertices[iSeg] = Vertex(FVector{ cosf(radian) * radius, 0.0f, sinf(radian) * radius }, FVector{ 1.0f,1.0f,1.0f });
+		outMesh.Vertices[iSeg] = Vertex({ cosf(radian) * radius, 0.0f, sinf(radian) * radius });
 
 		// calculate index
 		// cosf, sinf를 이용해 그린 원은 반시계 방향으로 그려지므로

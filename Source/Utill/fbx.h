@@ -1,12 +1,13 @@
 #pragma once
 
-#include "Core/Types.h"
+#include <memory>
 
-struct Mesh;
+#include "Core/Render/Mesh.h"
+#include "Core/Types.h"
 
 namespace fbx
 {
-	Mesh* GetMesh(uint id);
+	shared_ptr<Mesh> GetMesh(uint id);
 	void LoadFBX(const char* path, uint id);
 	void Release();
 }

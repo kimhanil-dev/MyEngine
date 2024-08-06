@@ -1,17 +1,15 @@
 #include "pch.h"
 #include "Game.h"
 
-#include <DirectXMath.h>
-
 #include "Utill/console.h"
 #include "Utill/fbx.h"
 #include "Core/Object/Object.h"
 #include "Core/Render/Graphics/IGraphics.h"
 #include "Core/Input/InputManager.h"
 #include "Core/Framwork/Timer.h"
-#include "Core/Render/Mesh.h"
 #include "Core/Render/GeometryGenerator.h"
 #include "Utill/PerformanceTester.h"
+
 
 Game::Game(HINSTANCE hAppInst)
 	:Application(hAppInst),
@@ -66,17 +64,31 @@ void Game::DrawScene()
 
 void Game::UpdateScene(float deltaTime)
 {
-	constexpr float rotateSpeed = 50.0f;
+	constexpr float rotateSpeed = 1.0f;
+
+	static XMFLOAT3 geoShperePos = { 0.0f,-0.0f, 10.0f };
+	static XMFLOAT3 viewDir;
+	static XMFLOAT4X4 translationMat; 
+	static XMFLOAT3 lightColor = XMFLOAT3(1.0f, 1.0f, 1.0f);
 	static float rotation = 0.0f;
-	static FMatrix4x4 rot{};
-	static FMatrix4x4 transMat = Matrix::MakeTranslationMatrix({ 0.0f,0.0f ,100.0f });
+
+	XMVECTOR view = XMLoadFloat3(&viewDir);
+	view = XMVector3Normalize(view);
+	XMStoreFloat3(&viewDir, view);
+
+	XMMATRIX tm = XMMatrixRotationRollPitchYaw(0.0f, rotation, 0.0f)
+		* XMMatrixTranslation(geoShperePos.x, geoShperePos.y, geoShperePos.z);
+
+	XMStoreFloat4x4(&translationMat, tm);
 
 	rotation += rotateSpeed * deltaTime;
 	for (auto& gm : mGeometryMods)
 	{
 		if (!gm.expired())
 		{
-			gm.lock()->SetTransform(Matrix::MakeRTMatrix({ 25.0f, rotation ,0.0f }, { 5.0f,0.0f,10.0f }));
+			gm.lock()->SetFloat3("gLightColor", (float*)&lightColor);
+			gm.lock()->SetFloat3("gViewDir", (float*)&viewDir);
+			gm.lock()->SetMatrix("gWorld", translationMat);
 			gm.lock()->SetFloat("gTime", mTimer->TotalTime());
 		}
 	}
@@ -94,12 +106,19 @@ void Game::LoadGame()
 	//mGeometryMods.emplace_back(mRenderer->BindMesh(fbx::GetMesh(1)));
 
 	GeometryGenerator geoGen;
-	/*Mesh cylinder;
-	geoGen.CreateCylinder(5.0f, 5.0f, 5.0f, 5, 5, cylinder);
-	auto mod = mRenderer->BindMesh(&cylinder);
-	mGeometryMods.push_back(mod);*/
-	Mesh sphere;
-	geoGen.CreateSphere(5.0f, 20, sphere);
-	auto mod = mRenderer->BindMesh(&sphere);
+	
+	/*Mesh grid;
+	geoGen.CreateGrid(50.0f, 50.0f, 30, 30, grid);
+	auto mod0 = mRenderer->BindMesh(&grid);
+	mGeometryMods.push_back(mod0);*/
+
+	Mesh geoSphere;
+	geoGen.CreateGeosphere({0.5f,1.0f,1.0f,1.0f}, 5.0f, 3, geoSphere);
+	auto mod = mRenderer->BindMesh(&geoSphere);
 	mGeometryMods.push_back(mod);
+
+	/*Mesh cylinder;
+	geoGen.CreateCylinder(2.0f, 3.0f, 5.0f, 8, 8, cylinder);
+	auto mod1 = mRenderer->BindMesh(&cylinder);
+	mGeometryMods.push_back(mod1);*/
 }

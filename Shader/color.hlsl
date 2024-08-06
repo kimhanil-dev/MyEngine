@@ -1,9 +1,23 @@
 
 cbuffer cbPerObject : register(b0)
 {
-    float4x4 gWorldViewProj;
+    float4x4 gWorld;
+    float4x4 gViewProj;
+    float3 gLightPosW;
+    float3 gLightColor;
+    float3 gViewDir;
     float gTime;
 }
+
+struct VS_INPUT
+{
+    float3 PosL : POSITION;
+    float3 Tangent : TANGENT0;
+    float3 Normal : NORMAL0;
+    float2 Tex0 : TEXCOORD0;
+    float2 Tex1 : TEXCOORD1;
+    float4 Color : COLOR0;
+};
 
 struct VS_OUTPUT
 {
@@ -25,23 +39,41 @@ float random(float2 uv)
 // 
 // vertex Shader
 //
-VS_OUTPUT VS(float3 PosL : POSITION, float4 Color : COLOR, float2 uv : TEXCOORD0)
+VS_OUTPUT VS(VS_INPUT input, uniform float3 lightDir = float3(0.0f, 1.0f, 0.0f))
 {
     VS_OUTPUT output = (VS_OUTPUT) 0;
-    output.PosH = mul(float4(PosL, 1.0f), gWorldViewProj);
-    output.Color = Color;
+    
+    float4 pos = float4(input.PosL, 1.0f);
+    float3 normal = input.Normal;
+    
+    // local
+    pos.y += cos(gTime * 5.0f) * pos.x * pos.x * 0.2f;
+    
+    // world
+    pos = mul(pos, gWorld);
+    normal = mul(normal,gWorld);
+    
+    float lDotN = max(dot(normal, lightDir), 0.0f);
+    float3 reflLight = lightDir + (normal * (-2 * lDotN));
+    
+    float blinnPhong = dot(reflLight, gViewDir);
+
+    float lambert = pow(lDotN, 3);
+    output.Color.rgb = input.Color.rgb * (lambert * gLightColor) + float3(0.15f, 0.15f, 0.15f);
+    
+    output.PosH = mul(pos, gViewProj);
     return output;
 }
 
 float4 PS(PS_INPUT input) : SV_Target
 {
-    return input.Color; // Yellow, with Alpha = 1
+    return input.Color; 
 }
 
 RasterizerState WireFrameRS
 {
     FillMode = Wireframe;
-    CullMode = None;
+    CullMode = Back;
     FrontCounterClockWise = false;
     // Default values used for any properties we do not set.
 };
@@ -60,6 +92,6 @@ technique11 ColorTech
     {
         SetVertexShader(CompileShader(vs_5_0, VS()));
         SetPixelShader(CompileShader(ps_5_0, PS()));
-        SetRasterizerState(WireFrameRS);
+        SetRasterizerState(SolidRS);
     }
 }

@@ -113,7 +113,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;_WINDOWS;FBXSDK_SHARED;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;_WINDOWS;FBXSDK_SHARED;DIRECTX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>$(ProjectDir);.\imgui\backends;.\imgui;D:\kimhanil\sdk\fbx\include;C:\Program Files\Autodesk\FBX\FBX SDK\2020.3.7\include;$(ProjectDir)Source;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
@@ -154,7 +154,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Source\Utill\PerformanceTester.h" />
-    <ClInclude Include="Source\Core\Math\MathDefine.h" />
+    <ClInclude Include="Source\Core\Math\MathHelper.h" />
     <ClInclude Include="Source\Core\Render\GeometryGenerator.h" />
     <ClInclude Include="Source\Core\Render\Graphics\IGeometryModifier.h" />
     <ClInclude Include="Source\Core\Render\Mesh.h" />
@@ -185,14 +185,13 @@
     <ClInclude Include="Source\Window\IWinMsgListener.h" />
     <ClInclude Include="Source\Window\resource.h" />
     <ClInclude Include="Source\Window\targetver.h" />
-    <ClInclude Include="Source\Core\Math\Vector.h" />
     <ClInclude Include="Source\Core\Render\Vertex.h" />
     <ClInclude Include="pch.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Source\Core\Render\Graphics\IGeometryModifier.cpp" />
     <ClCompile Include="Source\Utill\PerformanceTester.cpp" />
     <ClCompile Include="Source\Core\Render\GeometryGenerator.cpp" />
-    <ClCompile Include="Source\Core\Math\Matrix.cpp" />
     <ClCompile Include="Source\Game\Game.cpp" />
     <ClCompile Include="Source\Core\Framwork\Timer.cpp" />
     <ClCompile Include="Source\Core\Input\InputManager.cpp" />
@@ -230,16 +229,11 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="Source\Core\Math\Matrix.h">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
-    </ClCompile>
     <ClCompile Include="Source\Core\Render\Graphics\Graphics.cpp" />
     <ClCompile Include="Source\Utill\fbx.cpp" />
     <ClCompile Include="Source\Core\Framwork\Application.cpp" />
     <ClCompile Include="Source\Window\KWorld.cpp" />
     <ClCompile Include="Source\Core\Object\Object.cpp" />
-    <ClCompile Include="Source\Core\Math\Vector.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
