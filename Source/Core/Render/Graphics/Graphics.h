@@ -17,17 +17,15 @@
 using namespace std;
 using namespace DirectX;
 
-struct GeometryBuffers : public IGeometryModifier
+struct GeometryBuffers : public IGeometryDynamicModifier
 {
-	GeometryBuffers() : mWorld(XMMatrixIdentity()){}
+	GeometryBuffers() {}
 	virtual ~GeometryBuffers() {}
 
 	Microsoft::WRL::ComPtr<ID3DX11Effect> mFX;
 	Microsoft::WRL::ComPtr<ID3D11Buffer> mVB;
 	Microsoft::WRL::ComPtr<ID3D11Buffer> mIB;
 	
-	XMMATRIX						mWorld;
-	ID3DX11EffectMatrixVariable*	mWorldViewProj = nullptr;
 	ID3DX11EffectTechnique*			mTech = nullptr;
 
 	static Microsoft::WRL::ComPtr<ID3D11InputLayout> mIL;
@@ -41,9 +39,35 @@ struct GeometryBuffers : public IGeometryModifier
 			var->AsScalar()->SetFloat(value);
 		}
 	}
-	virtual void SetTransform(const FMatrix4x4& worldTransMat) override
+	
+	virtual void SetFloat3(const char* name, const float* value) override
 	{
-		mWorld = XMMATRIX(worldTransMat.m);
+		assert(mFX);
+
+		if (auto var = mFX->GetVariableByName(name))
+		{
+			var->AsVector()->SetFloatVector(value);
+		}
+	}
+
+	virtual void SetMatrix(const char* name, const FMatrix4x4& value) override
+	{
+		assert(mFX);
+
+		if (auto var = mFX->GetVariableByName(name))
+		{
+			var->AsMatrix()->SetMatrix(value.m);
+		}
+	}
+
+	function<void(D3D11_MAPPED_SUBRESOURCE data)> mMapAction = nullptr;
+	virtual void BindResourceMap(function<void(D3D11_MAPPED_SUBRESOURCE data)> mapAction) override
+	{
+		_ASSERT(mapAction);
+		_ASSERT(!mMapAction);
+
+		if (mMapAction == nullptr)
+			mMapAction = mapAction;
 	}
 };
 
@@ -55,7 +79,7 @@ public:
 	virtual void Release() override;
 private:
 	HRESULT BuildDevice();
-	HRESULT BuildGeometryBuffers(const Mesh* inMesh, GeometryBuffers& outGeomtryBuffers);
+	HRESULT BuildGeometryBuffers(const Mesh* inMesh, GeometryBuffers& outGeomtryBuffers, bool isDynamic = false);
 	HRESULT BuildVertexLayout(GeometryBuffers& geometryBuffers);
 	HRESULT BuildFX(GeometryBuffers& outGeomtryBuffers);
 private:
@@ -98,4 +122,5 @@ private:
 
 	// IGraphics을(를) 통해 상속됨
 	weak_ptr<IGeometryModifier> BindMesh(Mesh* mesh) override;
+	weak_ptr<IGeometryDynamicModifier> BindMeshDynamic(Mesh* mesh) override;
 };

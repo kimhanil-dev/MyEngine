@@ -13,8 +13,11 @@ Microsoft::WRL::ComPtr<ID3D11InputLayout> GeometryBuffers::mIL = nullptr;
 struct SimpleVertex
 {
 	XMFLOAT3 Pos;
-	XMFLOAT4 Col;
-	XMFLOAT2 uv;
+	XMFLOAT3 Tangent;
+	XMFLOAT3 Normal;
+	XMFLOAT2 Tex0;
+	XMFLOAT2 Tex1;
+	XMFLOAT4 Color;
 };
 
 struct ConstantBuffer
@@ -77,6 +80,21 @@ void Graphics::Render()
 	assert(mD3DImmediateContext);
 	assert(mSwapChain);
 
+
+	//*** update resources
+	for (auto geos : mGeometries)
+	{
+		if (geos->mMapAction != nullptr)
+		{
+			D3D11_MAPPED_SUBRESOURCE mappedData;
+			HR(mD3DImmediateContext->Map(geos->mVB.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedData));
+
+			geos->mMapAction(mappedData);
+
+			mD3DImmediateContext->Unmap(geos->mVB.Get(), 0);
+		}
+	}
+
 	//*** Clear back buffer
 	float clearColor[4] = { 0.0f, 0.125f, 0.6f, 1.0f }; //RGBA
 	mD3DImmediateContext->ClearRenderTargetView(mRenderTargetView.Get(), clearColor);
@@ -93,7 +111,7 @@ void Graphics::Render()
 	UINT offset = 0;
 	GeometryBuffers* buffers = nullptr;
 	size_t size = mGeometries.size();
-	for(int i = 0; i < size; ++i)
+	for (int i = 0; i < size; ++i)
 	{
 		buffers = mGeometries[i].get();
 
@@ -101,8 +119,8 @@ void Graphics::Render()
 		mD3DImmediateContext->IASetIndexBuffer(buffers->mIB.Get(), DXGI_FORMAT_R32_UINT, 0);
 
 		// set pass's constant 
-		XMMATRIX MVP = buffers->mWorld * mView * mProjection;
-		buffers->mWorldViewProj->SetMatrix((float*)&MVP);
+		XMMATRIX vp = mView * mProjection;
+		buffers->mFX->GetVariableByName("gViewProj")->AsMatrix()->SetMatrix((float*)&vp);
 
 		D3DX11_TECHNIQUE_DESC techDesc;
 		buffers->mTech->GetDesc(&techDesc);
@@ -116,7 +134,7 @@ void Graphics::Render()
 			mD3DImmediateContext->DrawIndexed(bd.ByteWidth / sizeof(UINT), 0, 0);
 		}
 	}
-	
+
 	mSwapChain->Present(0, 0);
 }
 
@@ -195,7 +213,7 @@ HRESULT Graphics::BuildDevice()
 				output->GetDisplayModeList(DXGI_FORMAT_R8G8B8A8_UNORM, NULL, &modeNum, displayModes);
 				for (uint iMode = 0; iMode < modeNum; ++iMode)
 				{
-					Print("\t\tMode: WIDTH = %d HEIGHT = %d REFRESH = %d/%d\n", 
+					Print("\t\tMode: WIDTH = %d HEIGHT = %d REFRESH = %d/%d\n",
 						displayModes[iMode].Width, displayModes[iMode].Height, displayModes[iMode].RefreshRate.Numerator, displayModes[iMode].RefreshRate.Denominator);
 				}
 				delete[] displayModes;
@@ -273,7 +291,7 @@ HRESULT Graphics::BuildDevice()
 	return S_OK;
 }
 
-HRESULT Graphics::BuildGeometryBuffers(const Mesh* inMesh, GeometryBuffers& outGeomtryBuffers)
+HRESULT Graphics::BuildGeometryBuffers(const Mesh* inMesh, GeometryBuffers& outGeomtryBuffers, bool isDynamic)
 {
 	assert(inMesh);
 
@@ -288,16 +306,20 @@ HRESULT Graphics::BuildGeometryBuffers(const Mesh* inMesh, GeometryBuffers& outG
 	for (const Vertex& v : meshVertices)
 	{
 		vertices[index].Pos = XMFLOAT3(v.Position.v);
-		vertices[index].Col = XMFLOAT4(v.Color.X, v.Color.Y, v.Color.Z, 1.0f);
-		vertices[index].uv = XMFLOAT2(v.U, v.V);
+		// tangent
+		vertices[index].Normal = XMFLOAT3(v.Normal.v);
+		vertices[index].Tex0 = XMFLOAT2(v.U, v.V);
+		// tex1
+		vertices[index].Color = XMFLOAT4(v.Color.X, v.Color.Y, v.Color.Z, 1.0f);
+
 		++index;
 	}
 
 	D3D11_BUFFER_DESC bd{};
-	bd.Usage = D3D11_USAGE_IMMUTABLE;
+	bd.Usage = isDynamic ? D3D11_USAGE_DYNAMIC : D3D11_USAGE_IMMUTABLE;
 	bd.ByteWidth = sizeof(SimpleVertex) * vertexCount;
 	bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-	bd.CPUAccessFlags = 0;
+	bd.CPUAccessFlags = isDynamic ? D3D10_CPU_ACCESS_WRITE : 0;
 	bd.MiscFlags = 0;
 
 	D3D11_SUBRESOURCE_DATA initData{};
@@ -328,8 +350,11 @@ HRESULT Graphics::BuildVertexLayout(GeometryBuffers& geometryBuffers)
 	D3D11_INPUT_ELEMENT_DESC layout[] =
 	{
 		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-		{ "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 28, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "TANGENT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 24, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 36, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "TEXCOORD", 1, DXGI_FORMAT_R32G32_FLOAT, 0, 44, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 	};
 	uint numElements = ARRAYSIZE(layout);
 
@@ -354,7 +379,6 @@ HRESULT Graphics::BuildFX(GeometryBuffers& outGeomtryBuffers)
 	IF_FAILED_RET(D3DX11CreateEffectFromMemory((LPVOID)&compiledShader[0],
 		compiledShader.size(), NULL, mD3DDevice.Get(), outGeomtryBuffers.mFX.GetAddressOf()));
 
-	outGeomtryBuffers.mWorldViewProj = outGeomtryBuffers.mFX->GetVariableByName("gWorldViewProj")->AsMatrix();
 	outGeomtryBuffers.mTech = outGeomtryBuffers.mFX->GetTechniqueByName("ColorTech");
 
 	return S_OK;
@@ -397,7 +421,7 @@ weak_ptr<IGeometryModifier> Graphics::BindMesh(Mesh* mesh)
 	auto gbs = mGeometries.emplace_back(new GeometryBuffers);
 	BuildFX(*gbs);
 	BuildGeometryBuffers(mesh, *gbs);
-	
+
 	if (!GeometryBuffers::mIL)
 	{
 		HR(BuildVertexLayout(*gbs));
@@ -405,6 +429,23 @@ weak_ptr<IGeometryModifier> Graphics::BindMesh(Mesh* mesh)
 
 	return gbs;
 }
+
+weak_ptr<IGeometryDynamicModifier> Graphics::BindMeshDynamic(Mesh* mesh)
+{
+	assert(mesh);
+
+	auto gbs = mGeometries.emplace_back(new GeometryBuffers);
+	BuildFX(*gbs);
+	BuildGeometryBuffers(mesh, *gbs, true);
+
+	if (!GeometryBuffers::mIL)
+	{
+		HR(BuildVertexLayout(*gbs));
+	}
+
+	return gbs;
+}
+
 
 HRESULT Graphics::CreateDepthStencilView()
 {
@@ -424,19 +465,19 @@ HRESULT Graphics::CreateDepthStencilView()
 	mSwapChain->GetDesc(&swapChainDesc);
 
 	D3D11_TEXTURE2D_DESC depthStencilDesc = {};
-	
-	depthStencilDesc.Width		= mWndClientWidth;
-	depthStencilDesc.Height		= mWndClientHeight;
-	depthStencilDesc.MipLevels	= 1;
-	depthStencilDesc.ArraySize	= 1;
-	depthStencilDesc.Format		= DXGI_FORMAT_D24_UNORM_S8_UINT;
+
+	depthStencilDesc.Width = mWndClientWidth;
+	depthStencilDesc.Height = mWndClientHeight;
+	depthStencilDesc.MipLevels = 1;
+	depthStencilDesc.ArraySize = 1;
+	depthStencilDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
 
 	depthStencilDesc.SampleDesc = swapChainDesc.SampleDesc;
 
-	depthStencilDesc.Usage			= D3D11_USAGE_DEFAULT;
-	depthStencilDesc.BindFlags		= D3D11_BIND_DEPTH_STENCIL;
+	depthStencilDesc.Usage = D3D11_USAGE_DEFAULT;
+	depthStencilDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
 	depthStencilDesc.CPUAccessFlags = 0;
-	depthStencilDesc.MiscFlags		= 0;
+	depthStencilDesc.MiscFlags = 0;
 
 	HR(mD3DDevice->CreateTexture2D(&depthStencilDesc, 0, mDepthStencilTexture.GetAddressOf()));
 	HR(mD3DDevice->CreateDepthStencilView(mDepthStencilTexture.Get(), 0, mDepthStencilView.GetAddressOf()));

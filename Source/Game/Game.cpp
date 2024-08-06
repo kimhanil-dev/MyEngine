@@ -1,17 +1,16 @@
 #include "pch.h"
 #include "Game.h"
 
-#include <DirectXMath.h>
-
 #include "Utill/console.h"
 #include "Utill/fbx.h"
 #include "Core/Object/Object.h"
 #include "Core/Render/Graphics/IGraphics.h"
 #include "Core/Input/InputManager.h"
 #include "Core/Framwork/Timer.h"
-#include "Core/Render/Mesh.h"
 #include "Core/Render/GeometryGenerator.h"
 #include "Utill/PerformanceTester.h"
+#include "Core/Math/MathDefine.h"
+
 
 Game::Game(HINSTANCE hAppInst)
 	:Application(hAppInst),
@@ -76,7 +75,7 @@ void Game::UpdateScene(float deltaTime)
 	{
 		if (!gm.expired())
 		{
-			gm.lock()->SetTransform(Matrix::MakeRTMatrix({ 25.0f, rotation ,0.0f }, { 5.0f,0.0f,10.0f }));
+			gm.lock()->SetMatrix("gWorld", Matrix::MakeRTMatrix({20.0f, rotation ,0.0f}, {0.0f,-0.0f, 10.0f}));
 			gm.lock()->SetFloat("gTime", mTimer->TotalTime());
 		}
 	}
@@ -94,12 +93,19 @@ void Game::LoadGame()
 	//mGeometryMods.emplace_back(mRenderer->BindMesh(fbx::GetMesh(1)));
 
 	GeometryGenerator geoGen;
-	/*Mesh cylinder;
-	geoGen.CreateCylinder(5.0f, 5.0f, 5.0f, 5, 5, cylinder);
-	auto mod = mRenderer->BindMesh(&cylinder);
-	mGeometryMods.push_back(mod);*/
-	Mesh sphere;
-	geoGen.CreateSphere(5.0f, 20, sphere);
-	auto mod = mRenderer->BindMesh(&sphere);
+	
+	/*Mesh grid;
+	geoGen.CreateGrid(50.0f, 50.0f, 30, 30, grid);
+	auto mod0 = mRenderer->BindMesh(&grid);
+	mGeometryMods.push_back(mod0);*/
+
+	Mesh geoSphere;
+	geoGen.CreateGeosphere(5.0f, 8, geoSphere);
+	auto mod = mRenderer->BindMesh(&geoSphere);
 	mGeometryMods.push_back(mod);
+
+	/*Mesh cylinder;
+	geoGen.CreateCylinder(2.0f, 3.0f, 5.0f, 8, 8, cylinder);
+	auto mod1 = mRenderer->BindMesh(&cylinder);
+	mGeometryMods.push_back(mod1);*/
 }

@@ -1,6 +1,7 @@
 #pragma once
 #include <vector>
 
+#include "Core/Render/Mesh.h"
 #include "Core/Framwork/Application.h"
 #include "Core/Render/Graphics/GraphicsFactory.h"
 #include "Core/Render/Graphics/IGeometryModifier.h"
@@ -25,13 +26,15 @@ protected:
     void LoadGame();
 
 private:
-    std::vector<weak_ptr<IGeometryModifier>> mGeometryMods;
+    vector<weak_ptr<IGeometryModifier>> mGeometryMods;
 
     IGraphics* mRenderer;
     Renderer mRenderType = Renderer::DriectX;
 
     Object* mCamera = nullptr;
     vector<Object*> mObjects;
+
+    
 
     // Inherited via FrameWork
     void OnResize() override;

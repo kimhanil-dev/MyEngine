@@ -133,7 +133,8 @@ void GeometryGenerator::CreateCylinder(const float topRadius, const float bottom
 			cyPos.Z = froms[iCSeg].Z + dists[iCSeg].Z * iCySeg * dCySeg;
 			cyPos.Y = cyY;
 
-			cylinderMesh.Vertices[iCyVtxStart + (iCySeg * circleSeg) + iCSeg].Position = cyPos;
+			UINT index = iCyVtxStart + (iCySeg * circleSeg) + iCSeg;
+			cylinderMesh.Vertices[index].Position = cyPos;
 		}
 	}
 
@@ -179,97 +180,97 @@ void GeometryGenerator::CreateCylinder(const float topRadius, const float bottom
 	outMesh = move(cylinderMesh);
 }
 
-void GeometryGenerator::CreateSphere(const float radius, UINT segment, Mesh& outMesh)
+void GeometryGenerator::CreateGeosphere(float radius, UINT numSubdivisions, Mesh& outMesh)
 {
-	UINT vertexCount = segment * segment * 0.5f - segment + 2;
-	UINT face = (segment - 2) * segment;
-	UINT indexCount = face * 3;
-	outMesh.Vertices.resize(vertexCount);
-	outMesh.Indices.resize(indexCount);
+	const float x = 0.525731f;
+	const float z = 0.850651f;
 
-	float dAngle = RadianF(360.0f) / segment;
+	outMesh.Vertices = {
+		Vertex(FVector(-x,0.0f,z), 1.0f),Vertex(FVector(x,0.0f,z), 1.0f),
+		Vertex(FVector(-x,0.0f,-z), 1.0f),Vertex(FVector(x,0.0f,-z), 1.0f),
+		Vertex(FVector(0.0f,z,x), 1.0f),Vertex(FVector(0.0f,z,-x), 1.0f),
+		Vertex(FVector(0.0f,-z,x), 1.0f),Vertex(FVector(0.0f,-z,-x), 1.0f),
+		Vertex(FVector(z,x,0.0f), 1.0f),Vertex(FVector(-z,x,0.0f), 1.0f),
+		Vertex(FVector(z,-x,0.0f), 1.0f),Vertex(FVector(-z,-x,0.0f), 1.0f)
+	};
 
-	UINT ySegNum = segment * 0.5f - 1;
+	outMesh.Indices = {
+		1,4,0, 4,9,0, 4,5,9, 8,5,4, 1,8,4,
+		1,10,8, 10,3,8, 8,3,5, 3,2,5, 3,7,2,
+		3,10,7, 10,6,7, 6,11,7, 6,0,11, 6,1,0,
+		10,1,6, 11,0,9, 2,11,9, 5,2,9, 11,2,7
+	};
 
-	vector<float> yPoses;
-	yPoses.resize(ySegNum);
-	vector<float> ratios;
-	ratios.resize(ySegNum);
-
-	for (int i = 0; i < ySegNum; ++i)
+	for (UINT i = 0; i < numSubdivisions; ++i)
 	{
-		yPoses[i] = (cosf((i + 1)* dAngle));
-		ratios[i] = (sinf((i + 1)* dAngle));
+		Subdivide(outMesh);
 	}
+	
+	for (Vertex& v : outMesh.Vertices)
+	{
+		FVector n =  v.Position.Normalize();
+		v.Position = n * radius;
+		v.Normal = n;
+	}
+}
 
-	// vertex
+void GeometryGenerator::Subdivide(Mesh& outMesh)
+{
+	UINT prevFaceCount = (UINT)outMesh.Indices.size() / 3;
+ 	UINT faceCount = prevFaceCount * 4;	// 1개의 페이스는 4개의 페이스로 분리됨
+	UINT vertexCount = prevFaceCount * 3;	 // 기존 face당 3개 증가
+
+	vector<Vertex> subVertices;
+	subVertices.reserve(vertexCount);
+
+	vector<UINT> subIndices;
+	subIndices.reserve(faceCount * 3);
+
+	FVector vm0, vm1, vm2;
+	FVector v0, v1, v2;
 	UINT index = 0;
-	UINT vtxRowPos = 0;
-	UINT vtxNextRowPos = 0;
-
-	float xzAngle = 0.0f;
-	for (UINT i = 0; i < segment; ++i)
+	UINT subIndex = 0;
+	for (UINT iFace = 0; iFace < prevFaceCount; ++iFace)
 	{
-		float x = cosf(xzAngle);
-		float z = sinf(xzAngle);
+		// get tri vertices
+		index = iFace * 3;
+		v0 = outMesh.Vertices[outMesh.Indices[index]].Position;
+		v1 = outMesh.Vertices[outMesh.Indices[index + 1]].Position;
+		v2 = outMesh.Vertices[outMesh.Indices[index + 2]].Position;
 
-		// ignore top, bottom vertex
-		vtxRowPos = i * ySegNum;
-		vtxNextRowPos = vtxRowPos + ySegNum;
-		for (UINT k = 0; k < ySegNum; ++k)
-		{
-			//vertex
-			FVector pos = FVector(x * ratios[k], yPoses[k], z * ratios[k]);
-			pos *= radius;
+		// calculate middle vertex position
+		vm0 = v0 + (v1 - v0) * 0.5f;
+		vm1 = v1 + (v2 - v1) * 0.5f;
+		vm2 = v2 + (v0 - v2) * 0.5f;
 
-			outMesh.Vertices[i * ySegNum + k].Position = pos;
-			outMesh.Vertices[i * ySegNum + k].Color = { 1.0f,1.0,1.0f };
-		}
+		// make sub triangles
+		subVertices.push_back(Vertex(v0, 1.0f));
+		subVertices.push_back(Vertex(vm0, 1.0f));
+		subVertices.push_back(Vertex(v1, 1.0f));
+		subVertices.push_back(Vertex(vm1, 1.0f));
+		subVertices.push_back(Vertex(v2, 1.0f));
+		subVertices.push_back(Vertex(vm2, 1.0f));
 
-		xzAngle += dAngle;
+		subIndex = iFace * 6;
+		subIndices.push_back(subIndex);
+		subIndices.push_back(subIndex + 1);
+		subIndices.push_back(subIndex + 5);
+
+		subIndices.push_back(subIndex + 5);
+		subIndices.push_back(subIndex + 3);
+		subIndices.push_back(subIndex + 4);
+
+		subIndices.push_back(subIndex + 5);
+		subIndices.push_back(subIndex + 1);
+		subIndices.push_back(subIndex + 3);
+
+		subIndices.push_back(subIndex + 1);
+		subIndices.push_back(subIndex + 2);
+		subIndices.push_back(subIndex + 3);
 	}
 
-	for (UINT i = 0; i < segment - 1; ++i)
-	{
-		vtxRowPos = i * ySegNum;
-		vtxNextRowPos = vtxRowPos + ySegNum;
-		for (UINT k = 0; k < segment / 4; ++k)
-		{
-			// index
-			outMesh.Indices[index] = vtxRowPos + k;
-			outMesh.Indices[index + 1] = vtxNextRowPos + k;
-			outMesh.Indices[index + 2] = vtxRowPos + k + 1;
-
-			outMesh.Indices[index + 3] = vtxRowPos + k + 1;
-			outMesh.Indices[index + 4] = vtxNextRowPos + k;
-			outMesh.Indices[index + 5] = vtxNextRowPos + k + 1;
-			index += 6;
-		}
-	}
-
-	//top
-	outMesh.Vertices[vertexCount - 2].Position = FVector(0.0f, radius, 0.0f);
-	for (UINT i = 0; i < segment - 1; ++i)
-	{
-		// index
-		outMesh.Indices[index] = vertexCount - 2;
-		outMesh.Indices[index + 1] = (i + 1) * ySegNum;
-		outMesh.Indices[index + 2] = i * ySegNum;
-
-		index += 3;
-	}
-
-	//bottom
-	outMesh.Vertices[vertexCount - 1].Position = FVector(0.0f, -radius, 0.0f);
-	for (UINT i = 0; i < segment - 1; ++i)
-	{
-		// index
-		outMesh.Indices[index] = vertexCount - 1;
-		outMesh.Indices[index + 1] = (i + 1) * ySegNum + (ySegNum - 1);
-		outMesh.Indices[index + 2] = i * ySegNum + (ySegNum - 1);
-
-		index += 3;
-	}
+	outMesh.Vertices = move(subVertices);
+	outMesh.Indices = move(subIndices);
 }
 
 void GeometryGenerator::CreateCircle(Mesh& outMesh, float radius, UINT segment, bool isCenterAtStart)

@@ -1,9 +1,22 @@
 
 cbuffer cbPerObject : register(b0)
 {
-    float4x4 gWorldViewProj;
+    float4x4 gWorld;
+    float4x4 gViewProj;
+    float3 gLightPosW;
+    float3 gViewPosW;
     float gTime;
 }
+
+struct VS_INPUT
+{
+    float3 PosL : POSITION;
+    float3 Tangent : TANGENT0;
+    float3 Normal : NORMAL0;
+    float2 Tex0 : TEXCOORD0;
+    float2 Tex1 : TEXCOORD1;
+    float4 Color : COLOR0;
+};
 
 struct VS_OUTPUT
 {
@@ -25,11 +38,26 @@ float random(float2 uv)
 // 
 // vertex Shader
 //
-VS_OUTPUT VS(float3 PosL : POSITION, float4 Color : COLOR, float2 uv : TEXCOORD0)
+VS_OUTPUT VS(VS_INPUT input)
 {
     VS_OUTPUT output = (VS_OUTPUT) 0;
-    output.PosH = mul(float4(PosL, 1.0f), gWorldViewProj);
-    output.Color = Color;
+    
+    float4 pos = float4(input.PosL, 1.0f);
+    float3 normal = input.Normal;
+    
+    // local
+    pos.y += cos(gTime * 5.0f) * pos.x * pos.x * 0.2f;
+    normal = normalize(pos);
+    
+    // world
+    pos = mul(pos, gWorld);
+    normal = mul(normal,gWorld);
+    
+    float bright = pow(dot(normal, float3(0.0f, 1.0f, 0.0f)), 3);
+    
+    output.PosH = mul(pos, gViewProj);
+    output.Color = 1.0f;
+    output.Color.rgb *= 1;
     return output;
 }
 
@@ -41,7 +69,7 @@ float4 PS(PS_INPUT input) : SV_Target
 RasterizerState WireFrameRS
 {
     FillMode = Wireframe;
-    CullMode = None;
+    CullMode = Back;
     FrontCounterClockWise = false;
     // Default values used for any properties we do not set.
 };

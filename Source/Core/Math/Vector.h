@@ -16,7 +16,7 @@ public:
 
 	FVector() :v{0.0f,0.0f,0.0f} {}
 	FVector(float x, float y, float z) :v{x,y,z} {}
-	FVector(float num) :v{num} {}
+	FVector(float num) :v{ num ,num, num } {}
 
 	FVector operator + (const FVector& v) const { return { X + v.X, Y + v.Y, Z + v.Z }; }
 	FVector operator - (const FVector& v) const { return { X - v.X, Y - v.Y, Z - v.Z }; }

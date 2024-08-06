@@ -9,9 +9,11 @@ public:
 
 	void CreateCylinder(const float topRadius, const float bottomRadius, const float height, 
 		const UINT circleSeg, const UINT cylinderSeg, Mesh& outMesh);				
-
-	void CreateSphere(const float radius, UINT segment, Mesh& outMesh);
+	
+	void CreateGeosphere(float radius, UINT numSubdivisions, Mesh& outMesh);
 
 	void CreateCircle(Mesh& outMesh, const float radius, const UINT segment, bool isCenterAtStart = false);
+
+	void Subdivide(Mesh& outMesh);
 };
 

@@ -190,6 +190,8 @@
     <ClInclude Include="pch.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Source\Core\Render\Graphics\IGeometryModifier.cpp" />
+    <ClCompile Include="Source\Core\Render\Vertex.cpp" />
     <ClCompile Include="Source\Utill\PerformanceTester.cpp" />
     <ClCompile Include="Source\Core\Render\GeometryGenerator.cpp" />
     <ClCompile Include="Source\Core\Math\Matrix.cpp" />
