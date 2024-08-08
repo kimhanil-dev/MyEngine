@@ -1,6 +1,8 @@
 #include "pch.h"
 #include "Game.h"
 
+#include <array>
+
 #include "Utill/console.h"
 #include "Utill/fbx.h"
 #include "Core/Object/Object.h"
@@ -66,15 +68,11 @@ void Game::UpdateScene(float deltaTime)
 {
 	constexpr float rotateSpeed = 1.0f;
 
-	static XMFLOAT3 geoShperePos = { 0.0f,-0.0f, 10.0f };
-	static XMFLOAT3 viewDir;
+	static XMFLOAT3 geoShperePos = { 0.0f, 0.0f, 10.0f };
 	static XMFLOAT4X4 translationMat; 
 	static XMFLOAT3 lightColor = XMFLOAT3(1.0f, 1.0f, 1.0f);
 	static float rotation = 0.0f;
-
-	XMVECTOR view = XMLoadFloat3(&viewDir);
-	view = XMVector3Normalize(view);
-	XMStoreFloat3(&viewDir, view);
+	static array<float,3> eyePos = { 0.0f,0.0f,0.0f };
 
 	XMMATRIX tm = XMMatrixRotationRollPitchYaw(0.0f, rotation, 0.0f)
 		* XMMatrixTranslation(geoShperePos.x, geoShperePos.y, geoShperePos.z);
@@ -87,7 +85,7 @@ void Game::UpdateScene(float deltaTime)
 		if (!gm.expired())
 		{
 			gm.lock()->SetFloat3("gLightColor", (float*)&lightColor);
-			gm.lock()->SetFloat3("gViewDir", (float*)&viewDir);
+			gm.lock()->SetFloat3("gEyePosL", (float*)&eyePos);
 			gm.lock()->SetMatrix("gWorld", translationMat);
 			gm.lock()->SetFloat("gTime", mTimer->TotalTime());
 		}
@@ -113,7 +111,7 @@ void Game::LoadGame()
 	mGeometryMods.push_back(mod0);*/
 
 	Mesh geoSphere;
-	geoGen.CreateGeosphere({0.5f,1.0f,1.0f,1.0f}, 5.0f, 3, geoSphere);
+	geoGen.CreateGeosphere({0.5f,1.0f,1.0f,1.0f}, 5.0f, 8, geoSphere);
 	auto mod = mRenderer->BindMesh(&geoSphere);
 	mGeometryMods.push_back(mod);
 

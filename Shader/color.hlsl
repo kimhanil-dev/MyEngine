@@ -5,7 +5,7 @@ cbuffer cbPerObject : register(b0)
     float4x4 gViewProj;
     float3 gLightPosW;
     float3 gLightColor;
-    float3 gViewDir;
+    float3 gEyePosW;
     float gTime;
 }
 
@@ -39,29 +39,37 @@ float random(float2 uv)
 // 
 // vertex Shader
 //
-VS_OUTPUT VS(VS_INPUT input, uniform float3 lightDir = float3(0.0f, 1.0f, 0.0f))
+VS_OUTPUT VS(VS_INPUT input, uniform float3 l = float3(0.0f, -1.0f, 0.0f))
 {
     VS_OUTPUT output = (VS_OUTPUT) 0;
     
-    float4 pos = float4(input.PosL, 1.0f);
-    float3 normal = input.Normal;
-    
+    float4 p = float4(input.PosL, 1.0f);
+    float3 n = input.Normal;
+  
     // local
-    pos.y += cos(gTime * 5.0f) * pos.x * pos.x * 0.2f;
+    p.y += cos(gTime * 5.0f) * p.x * p.x * 0.2f;
     
     // world
-    pos = mul(pos, gWorld);
-    normal = mul(normal,gWorld);
+    p = mul(p, gWorld);
+    n = mul(n,gWorld);
+    float3 viewDirW = gEyePosW - p;
     
-    float lDotN = max(dot(normal, lightDir), 0.0f);
-    float3 reflLight = lightDir + (normal * (-2 * lDotN));
+    float3 r = l + (n * (-2 * dot(n, l))); // reflection light direction
     
-    float blinnPhong = dot(reflLight, gViewDir);
-
-    float lambert = pow(lDotN, 3);
-    output.Color.rgb = input.Color.rgb * (lambert * gLightColor) + float3(0.15f, 0.15f, 0.15f);
+    float blinnPhong = pow(max(dot(r, viewDirW), 0), 128); // birghtness (specular)
+    float lambert = max(dot(n, -l), 0); // brightness (diffuse)
+     
+                                    // diffuse color    // light diffuse color
+    float3 diffuse = lambert * input.Color.rgb * float3(1.0f, 1.0f, 1.0f);
+                                    // specular color   // light specular color
+    float3 specular = blinnPhong * input.Color.rgb * float3(1.0f, 1.0f, 1.0f);
+                                    // ambient color    // light ambient color
+    float3 ambient = float3(0.15f, 0.15f, 0.15f) * float3(1.0f, 1.0f, 1.0f);
     
-    output.PosH = mul(pos, gViewProj);
+    output.Color.rgb = ambient + diffuse + ambient;
+    output.Color.a = 1.0f;
+    
+    output.PosH = mul(p, gViewProj);
     return output;
 }
 
