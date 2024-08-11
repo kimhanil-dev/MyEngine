@@ -3,9 +3,12 @@ cbuffer cbPerObject : register(b0)
 {
     float4x4 gWorld;
     float4x4 gViewProj;
-    float3 gLightPosW;
+    
+    float4 gLightPosW;
     float3 gLightColor;
+    
     float3 gEyePosW;
+    
     float gTime;
 }
 
@@ -56,7 +59,7 @@ VS_OUTPUT VS(VS_INPUT input, uniform float3 l = float3(0.0f, -1.0f, 0.0f))
     
     float3 r = l + (n * (-2 * dot(n, l))); // reflection light direction
     
-    float blinnPhong = pow(max(dot(r, viewDirW), 0), 128); // birghtness (specular)
+    float blinnPhong = pow(max(dot(r, viewDirW), 0), 1); // birghtness (specular)
     float lambert = max(dot(n, -l), 0); // brightness (diffuse)
      
                                     // diffuse color    // light diffuse color
@@ -66,7 +69,7 @@ VS_OUTPUT VS(VS_INPUT input, uniform float3 l = float3(0.0f, -1.0f, 0.0f))
                                     // ambient color    // light ambient color
     float3 ambient = float3(0.15f, 0.15f, 0.15f) * float3(1.0f, 1.0f, 1.0f);
     
-    output.Color.rgb = ambient + diffuse + ambient;
+    output.Color.rgb = ambient + diffuse + specular;
     output.Color.a = 1.0f;
     
     output.PosH = mul(p, gViewProj);
