@@ -28,6 +28,7 @@ void GeometryGenerator::CreateGrid(float width, float depth, UINT m, UINT n, Mes
 			UINT index = i * n + k;
 			outMesh.Vertices[index].Position = XMFLOAT3(x, 0.0f, z);
 			outMesh.Vertices[index].Color = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+			outMesh.Vertices[index].Normal = XMFLOAT3(0.0f,1.0f,0.0f);
 			outMesh.Vertices[index].UV = XMFLOAT2(k * du, i * dv);
 		}
 	}

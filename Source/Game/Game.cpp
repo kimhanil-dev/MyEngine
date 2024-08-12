@@ -12,6 +12,10 @@
 #include "Core/Render/GeometryGenerator.h"
 #include "Utill/PerformanceTester.h"
 
+#include "Core/Object/SphereObject.h"
+#include "Core/Object/PointLightObject.h"
+#include "Core/Object/CameraObject.h"
+#include "Core/Object/PlaneObject.h"
 
 Game::Game(HINSTANCE hAppInst)
 	:Application(hAppInst),
@@ -29,6 +33,7 @@ Game::~Game()
 
 	for (int i = 0; i < mObjects.size(); ++i)
 	{
+		mObjects[i]->Destroy();
 		delete mObjects[i];
 	}
 	mObjects.clear();
@@ -66,29 +71,11 @@ void Game::DrawScene()
 
 void Game::UpdateScene(float deltaTime)
 {
-	constexpr float rotateSpeed = 1.0f;
+	mInputManager->Update();
 
-	static XMFLOAT3 geoShperePos = { 0.0f, 0.0f, 10.0f };
-	static XMFLOAT4X4 translationMat; 
-	static XMFLOAT3 lightColor = XMFLOAT3(1.0f, 1.0f, 1.0f);
-	static float rotation = 0.0f;
-	static array<float,3> eyePos = { 0.0f,0.0f,0.0f };
-
-	XMMATRIX tm = XMMatrixRotationRollPitchYaw(0.0f, rotation, 0.0f)
-		* XMMatrixTranslation(geoShperePos.x, geoShperePos.y, geoShperePos.z);
-
-	XMStoreFloat4x4(&translationMat, tm);
-
-	rotation += rotateSpeed * deltaTime;
-	for (auto& gm : mGeometryMods)
+	for (IObject* obj : mObjects)
 	{
-		if (!gm.expired())
-		{
-			gm.lock()->SetFloat3("gLightColor", (float*)&lightColor);
-			gm.lock()->SetFloat3("gEyePosL", (float*)&eyePos);
-			gm.lock()->SetMatrix("gWorld", translationMat);
-			gm.lock()->SetFloat("gTime", mTimer->TotalTime());
-		}
+		obj->Update(deltaTime);
 	}
 }
 
@@ -99,24 +86,32 @@ void Game::LoadGame()
 
 	mInputManager->BindInput(VK_F1, InputManager::KeyState::Down, [this](unsigned int key, InputManager::KeyState state) {mCurrState = State::Destroy, SendMessage(mhMainWnd, WM_CLOSE, NULL, NULL); });
 	mInputManager->BindInput(VK_F2, InputManager::KeyState::Down, [this](unsigned int key, InputManager::KeyState state) {mCurrState = mCurrState == State::Pause ? State::Idle : State::Pause; });
-	mInputManager->BindInput(VK_LEFT, InputManager::KeyState::Down, [this](unsigned int key, InputManager::KeyState state) {mCurrState = mCurrState == State::Pause ? State::Idle : State::Pause; });
 
-	//mGeometryMods.emplace_back(mRenderer->BindMesh(fbx::GetMesh(1)));
+	/*const UINT ROW_COUNT = 6;
+	const UINT COLUMN_COUNT = 6;
+	const int WIDTH = 100;
+	const int HEIGHT= 100;
+	for (UINT i = 0; i < ROW_COUNT; ++i)
+	{
+		for (UINT j = 0; j < COLUMN_COUNT; ++j)
+		{
+			float x = -WIDTH * 0.5f + i * (WIDTH / COLUMN_COUNT);
+			float y = -HEIGHT * 0.5f + j * (HEIGHT / ROW_COUNT);
+			mObjects.push_back(new SphereObject({  x,  y,0.0f}));
+		}
+	}*/
+	mObjects.push_back(new SphereObject({ 0.0f,0.0f,0.0f }));
+	mObjects.push_back(new PointLightObject);
+	mObjects.push_back(new CameraObject);
+	mObjects.push_back(new PlaneObject);
 
-	GeometryGenerator geoGen;
-	
-	/*Mesh grid;
-	geoGen.CreateGrid(50.0f, 50.0f, 30, 30, grid);
-	auto mod0 = mRenderer->BindMesh(&grid);
-	mGeometryMods.push_back(mod0);*/
+	for (IObject* obj : mObjects)
+	{
+		obj->Init(mRenderer);
+	}
 
-	Mesh geoSphere;
-	geoGen.CreateGeosphere({0.5f,1.0f,1.0f,1.0f}, 5.0f, 8, geoSphere);
-	auto mod = mRenderer->BindMesh(&geoSphere);
-	mGeometryMods.push_back(mod);
-
-	/*Mesh cylinder;
-	geoGen.CreateCylinder(2.0f, 3.0f, 5.0f, 8, 8, cylinder);
-	auto mod1 = mRenderer->BindMesh(&cylinder);
-	mGeometryMods.push_back(mod1);*/
+	for (IObject* obj : mObjects)
+	{
+		obj->BindKeyInput(mInputManager.get());
+	}
 }

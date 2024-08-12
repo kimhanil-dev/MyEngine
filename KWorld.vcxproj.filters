@@ -43,7 +43,7 @@
     <ClInclude Include="Source\Core\Framwork\Application.h">
       <Filter>Game\FrameWork</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Core\Object\Object.h">
+    <ClInclude Include="Source\Core\Object\IObject.h">
       <Filter>Game\FrameWork\Object</Filter>
     </ClInclude>
     <ClInclude Include="Source\Window\framework.h">
@@ -86,13 +86,16 @@
     <ClInclude Include="Source\Core\Math\MathHelper.h" />
     <ClInclude Include="Source\Core\Render\GeometryGenerator.h" />
     <ClInclude Include="Source\Utill\PerformanceTester.h" />
+    <ClInclude Include="Source\Core\Object\Object.h" />
+    <ClInclude Include="Source\Core\Render\Graphics\Lights\PointLight.h" />
+    <ClInclude Include="Source\Core\Object\SphereObject.h" />
+    <ClInclude Include="Source\Core\Object\PointLightObject.h" />
+    <ClInclude Include="Source\Core\Object\CameraObject.h" />
+    <ClInclude Include="Source\Core\Object\PlaneObject.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Core\Framwork\Application.cpp">
       <Filter>Game\FrameWork</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Core\Object\Object.cpp">
-      <Filter>Game\FrameWork\Object</Filter>
     </ClCompile>
     <ClCompile Include="Source\Window\KWorld.cpp">
       <Filter>Game\Windows</Filter>
@@ -118,6 +121,11 @@
     <ClCompile Include="Source\Core\Render\GeometryGenerator.cpp" />
     <ClCompile Include="Source\Utill\PerformanceTester.cpp" />
     <ClCompile Include="Source\Core\Render\Graphics\IGeometryModifier.cpp" />
+    <ClCompile Include="Source\Core\Object\Object.cpp" />
+    <ClCompile Include="Source\Core\Object\SphereObject.cpp" />
+    <ClCompile Include="Source\Core\Object\PointLightObject.cpp" />
+    <ClCompile Include="Source\Core\Object\CameraObject.cpp" />
+    <ClCompile Include="Source\Core\Object\PlaneObject.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Resource\KWorld.rc">

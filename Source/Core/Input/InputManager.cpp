@@ -5,6 +5,10 @@
 
 #include "Utill/console.h"
 
+InputManager::InputManager()
+{
+}
+
 void InputManager::BindInput(unsigned int key, KeyState keyState, InputEvent callback)
 {
 	// out of range
@@ -23,6 +27,20 @@ void InputManager::UnBindInput(unsigned int key, KeyState keyState)
 {
 	if (InputEvent& inputEvent = GetInputEventRef(key,keyState))
 		inputEvent = InputEvent();
+}
+
+void InputManager::Update()
+{
+	for (UINT i = 0; i < KEY_RANGE; ++i)
+	{
+		if (mKeyStates[i] == KeyState::Press)
+		{
+			if (InputEvent& inputEvent = GetInputEventRef(i, KeyState::Press))
+			{
+				inputEvent(i, KeyState::Press);
+			}
+		}
+	}
 }
 
 void InputManager::BindInput_MousePos(MouseMoveEvent callback)

@@ -106,6 +106,34 @@ void Graphics::Render()
 	mD3DImmediateContext->IASetInputLayout(GeometryBuffers::mIL.Get());
 	mD3DImmediateContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
+	// calculate light pos
+	XMFLOAT3 pointLightPos = {0.0f,0.0f,0.0f};
+	if (mPointLightObject)
+	{
+		pointLightPos = mPointLightObject->GetPosition();
+		XMFLOAT3 rotation = mPointLightObject->GetRotation();
+
+		XMMATRIX matRot = XMMatrixRotationRollPitchYaw(rotation.x, rotation.y, rotation.z);
+
+		XMVECTOR pos = XMLoadFloat3(&pointLightPos);
+		
+		pos = XMVector3Transform(pos, matRot);
+		
+		XMStoreFloat3(&pointLightPos, pos);
+	}
+
+	// calculate View matrix
+	XMFLOAT3 eyePos = mCameraObject->GetPosition();
+	XMVECTOR eyePosSIMD = XMLoadFloat3(&eyePos);
+
+	XMFLOAT3 eyeDir = mCameraObject->GetForwardVector();
+	XMVECTOR eyeDirSIMD = XMLoadFloat3(&eyeDir);
+
+	XMFLOAT3 eyeUp = mCameraObject->GetUpVector();
+	XMVECTOR eyeUpSIMD = XMLoadFloat3(&eyeUp);
+
+	mView = XMMatrixLookAtLH(eyePosSIMD, eyeDirSIMD, eyeUpSIMD);
+
 	//*** set geomatry buffers
 	UINT stride = sizeof(SimpleVertex);
 	UINT offset = 0;
@@ -118,9 +146,18 @@ void Graphics::Render()
 		mD3DImmediateContext->IASetVertexBuffers(0, 1, buffers->mVB.GetAddressOf(), &stride, &offset);
 		mD3DImmediateContext->IASetIndexBuffer(buffers->mIB.Get(), DXGI_FORMAT_R32_UINT, 0);
 
+		// set point light
+		if (mPointLightObject)
+		{
+			buffers->SetFloat3("gPointLightPos", (float*)&pointLightPos);
+		}
+
 		// set pass's constant 
 		XMMATRIX vp = mView * mProjection;
 		buffers->mFX->GetVariableByName("gViewProj")->AsMatrix()->SetMatrix((float*)&vp);
+
+		XMFLOAT3 ep = mCameraObject->GetPosition();
+		buffers->SetFloat3("gEyePosW", (float*)&ep);
 
 		D3DX11_TECHNIQUE_DESC techDesc;
 		buffers->mTech->GetDesc(&techDesc);
@@ -141,15 +178,6 @@ void Graphics::Render()
 void Graphics::Release()
 {
 	DebugUI::Release();
-}
-
-void Graphics::SetView(const XMFLOAT4X4& viewMatrix)
-{
-	XMStoreFloat4x4(const_cast<XMFLOAT4X4*>(&viewMatrix), mView);
-}
-
-void Graphics::AddObject(Object* object)
-{
 }
 
 bool Graphics::IsInited()
@@ -444,6 +472,31 @@ weak_ptr<IGeometryDynamicModifier> Graphics::BindMeshDynamic(Mesh* mesh)
 	}
 
 	return gbs;
+}
+
+void Graphics::BindPointLight(const IObject* object, PointLight& desc)
+{
+	_ASSERT(object);
+
+	mPointLightObject = object;
+	mPointLightDesc = desc;
+}
+
+void Graphics::UnBindPointLight(const IObject* lightObject)
+{
+	mPointLightObject = nullptr;
+}
+
+void Graphics::BindCameraObject(const IObject* cameraObject)
+{
+	_ASSERT(cameraObject);
+
+	mCameraObject = cameraObject;
+}
+
+void Graphics::UnBindCameraObject(const IObject* cameraObject)
+{
+	mCameraObject = nullptr;
 }
 
 

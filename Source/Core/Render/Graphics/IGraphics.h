@@ -5,7 +5,9 @@
 
 #include "Core/Types.h"	
 
-class Object;
+#include "Lights/PointLight.h"
+
+class IObject;
 class IGeometryModifier;
 class IGeometryDynamicModifier;
 struct Mesh;
@@ -19,12 +21,17 @@ public:
 	virtual bool Init(const HWND& hWnd) = 0;
 	virtual void Render() = 0;
 	virtual void Release() = 0;
+
 	virtual weak_ptr<IGeometryModifier> BindMesh(Mesh* mesh) = 0;
 	virtual weak_ptr<IGeometryDynamicModifier> BindMeshDynamic(Mesh* mesh) = 0;
 
 	virtual void ResizeWindow(uint width, uint height) = 0;
-	virtual void AddObject(Object* object) = 0;
-	virtual void SetView(const XMFLOAT4X4& viewMatrix) = 0;
+
+	virtual void BindCameraObject(const IObject* cameraObject) = 0;
+	virtual void UnBindCameraObject(const IObject* cameraObject) = 0;
+
+	virtual void BindPointLight(const IObject* object, PointLight& desc) = 0;
+	virtual void UnBindPointLight(const IObject* lightObject) = 0;
 
 	virtual bool IsInited() = 0;
 };

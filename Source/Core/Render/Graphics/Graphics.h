@@ -9,7 +9,10 @@
 #include <d3dx11effect.h>
 #include <wrl.h>
 
+#include "Core/Object/Object.h"
 #include "IGeometryModifier.h"
+
+#include "Lights/PointLight.h"
 
 
 using namespace std;
@@ -102,10 +105,6 @@ private:
 	XMMATRIX mView;
 	XMMATRIX mProjection;
 
-	// Inherited via IGraphics
-	void SetView(const XMFLOAT4X4& viewMatrix) override;
-	virtual void AddObject(Object* object) override;
-
 	bool bIsInited = false;
 	virtual bool IsInited() override;
 
@@ -121,4 +120,17 @@ private:
 	// IGraphics을(를) 통해 상속됨
 	weak_ptr<IGeometryModifier> BindMesh(Mesh* mesh) override;
 	weak_ptr<IGeometryDynamicModifier> BindMeshDynamic(Mesh* mesh) override;
+
+	const IObject* mCameraObject;
+
+	const IObject* mPointLightObject;
+	PointLight mPointLightDesc;
+
+	// IGraphics을(를) 통해 상속됨
+	void BindPointLight(const IObject* object, PointLight& desc) override;
+	void UnBindPointLight(const IObject* lightObject) override;
+
+	// IGraphics을(를) 통해 상속됨
+	void BindCameraObject(const IObject* cameraObject) override;
+	void UnBindCameraObject(const IObject* cameraObject) override;
 };

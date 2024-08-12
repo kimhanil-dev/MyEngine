@@ -15,7 +15,7 @@ class InputManager : public IWinMsgListener
 {
 //----- Button
 public:
-	InputManager() = default;
+	InputManager();
 	virtual ~InputManager() = default;
 
 	enum class KeyState : unsigned int
@@ -54,6 +54,9 @@ public:
 	/// </param>
 	void UnBindInput(unsigned int key, KeyState keyState);
 
+	// 인풋 상태가 Press인 key들에 바인딩 된 이벤트를 지속적으로 호출해줍니다.
+	void Update();
+
 protected:
 	static constexpr unsigned int KEY_RANGE = VK_OEM_CLEAR + 1;
 
@@ -76,8 +79,8 @@ protected:
 public:
 	struct MousePos
 	{
-		unsigned int X = 0;
-		unsigned int Y = 0;
+		int X = 0;
+		int Y = 0;
 	};
 
 	typedef function<void(const MousePos& mousePox)> MouseMoveEvent;

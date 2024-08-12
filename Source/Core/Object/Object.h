@@ -1,20 +1,41 @@
 #pragma once
 
-#include <vector>
-#include "Core/Render/Vertex.h"
+#include "IObject.h"
 
-struct Mesh;
+#include <DirectXMath.h>
 
-class Object
+class IGeometryModifier;
+
+class Object : public IObject
 {
 public:
-	Object() {}
+	Object();
+	virtual ~Object();
 
-public:
-	int mID = 0;
+	// IObject을(를) 통해 상속됨
+	void Update(float deltaTime) override;
 
-	Mesh* mMesh = nullptr;
+protected:
+	weak_ptr<IGeometryModifier> mMesh;
 
-	std::vector<Vertex> mVertices;
+	XMFLOAT3 mPosition = {0.0f,0.0f,0.0f};
+	XMFLOAT3 mForwardRotation = {0.0f,0.0f,0.0f};
+	XMFLOAT3 mDeferredRotation = {0.0f,0.0f,0.0f};
+
+	XMFLOAT4X4 GetWorldTransform() const;
+
+	// IObject을(를) 통해 상속됨
+	void Init(IGraphics* const renderer) override;
+	void BindKeyInput(InputManager* const inputManager) override;
+	void Destroy() override;
+
+	const XMFLOAT3& GetPosition() const override;
+	const XMFLOAT3& GetRotation() const override;
+	const XMFLOAT3 GetUpVector() const override;
+
+	// IObject을(를) 통해 상속됨
+	const XMFLOAT3 GetForwardVector() const override;
+
+	// IObject을(를) 통해 상속됨
+	const XMFLOAT3 GetRightVector() const override;
 };
-

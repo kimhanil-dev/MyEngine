@@ -8,7 +8,7 @@
 
 class IGraphics;
 class IGeometryModifier;
-class Object;
+class IObject;
 
 class Game :
     public Application
@@ -31,8 +31,8 @@ private:
     IGraphics* mRenderer;
     Renderer mRenderType = Renderer::DriectX;
 
-    Object* mCamera = nullptr;
-    vector<Object*> mObjects;
+    IObject* mCamera = nullptr;
+    vector<IObject*> mObjects;
 
     
 
