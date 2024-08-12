@@ -65,13 +65,12 @@ VS_OUTPUT VS(VS_INPUT input, uniform float3 l = float3(0.0f, -1.0f, 0.0f))
     float3 spotLightPos = float3(-30.0f, 0.0f, 0.0f);
     
     // point light
-    //l = p.xyz - gPointLightPos.xyz;
+    l = p.xyz - gPointLightPos.xyz;
     
     // spot light
-    l = p.xyz - spotLightPos;
-    
-    float deltaAngle = cos(spotLightAngle) - dot(normalize(l), spotLightDir);
-    deltaAngle = max(deltaAngle, 0.0f);
+    //l = p.xyz - spotLightPos;
+    //float deltaAngle = dot(normalize(l), spotLightDir) - cos(spotLightAngle);
+    //deltaAngle = max(deltaAngle, 0.0f);
     
     float distance = length(l);
     // Diffuse, Specualr, Ambient
@@ -95,11 +94,11 @@ VS_OUTPUT VS(VS_INPUT input, uniform float3 l = float3(0.0f, -1.0f, 0.0f))
     float3 color = ambient + diffuse + specular;
     // intensity decrease constants
     float a0 = 0.3f;    // constant
-    float a1 = 0.3f;    // linear
-    float a2 = 0.3f;    // exponential
+    float a1 = 0.15f;    // linear
+    float a2 = 0.15f;    // exponential
     color /= (a0 + a1 * distance + a2 * pow(distance, 2));
     
-    output.Color.rgb = cos(spotLightAngle);
+    output.Color.rgb = color;
     output.Color.a = 1.0f;
     
     output.PosH = mul(p, gViewProj);
