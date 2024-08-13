@@ -1,19 +1,69 @@
 
+struct Material
+{
+    float4 Ambient;
+    float4 Diffuse;
+    float4 Specular;
+};
+
+struct DirectionalLight
+{
+    float4 Ambient;
+    float4 Diffuse;
+    float4 Specular;
+    
+    float4 Direction;
+};
+
+struct PointLight
+{
+    float4 Ambient;
+    float4 Diffuse;
+    float4 Specular;
+    
+    float3 Position;
+    float Range;
+    
+    float3 Att;
+    float pad;
+};
+
+struct SpotLight
+{
+    float4 Ambient;
+    float4 Diffuse;
+    float4 Specular;
+    
+    float3 Position;
+    float Range;
+    
+    float3 Att;
+    float pad;
+    
+    float3 Direction;
+    float Spot;
+};
+
+//struct ArrayTest
+//{
+//    float4 array[4];
+    
+//    static float2 aggressivePackArray[8] = (float2[8])array;
+//};
+
 cbuffer cbPerObject : register(b0)
 {
     float4x4 gWorld;
     float4x4 gViewProj;
-    
-    float4 gPointLightPos;
-    float gPointLightRadius;
-    float3 gPointLightColor;
-    
     float3 gEyePosW;
-    
     float gTime;
+    
+    Material gMaterial;
+    
+    DirectionalLight gDirectionalLight;
+    PointLight gPointLight;
+    SpotLight gSpotLight;
 }
-
-
 
 struct VS_INPUT
 {
@@ -43,71 +93,131 @@ float random(float2 uv)
     return frac(sin(dot(uv, float2(12.9898, 78.233))) * 43758.5453123);
 }
 
+void ComputeDirectionalLight(Material mat, DirectionalLight L, float3 normal, float3 toEye, out float4 ambient, out float4 diffuse, out float4 spec)
+{
+    ambient = float4(0.0f, 0.0f, 0.0f, 0.0f);
+    diffuse = float4(0.0f, 0.0f, 0.0f, 0.0f);
+    spec = float4(0.0f, 0.0f, 0.0f, 0.0f);
+    
+    float3 lightVec = -L.Direction;
+    
+    ambient = mat.Ambient * L.Ambient;
+    
+    float diffuseFactor = dot(lightVec, normal);
+    
+    [flatten]
+    if (diffuseFactor > 0.0f)
+    {
+        float3 v = reflect(-lightVec, normal);
+        float specFactor = pow(max(dot(v, toEye), 0.0f), mat.Specular.w);
+        
+        diffuse = diffuseFactor * mat.Diffuse * L.Diffuse;
+        spec = specFactor * mat.Specular * L.Specular;
+    }
+}
+
+void ComputePointLight(Material mat, PointLight L, float3 posW, float3 normal, float3 toEye, out float4 ambient, out float4 diffuse, out float4 spec)
+{
+    ambient = float4(0.0f, 0.0f, 0.0f, 0.0f);
+    diffuse = float4(0.0f, 0.0f, 0.0f, 0.0f);
+    spec = float4(0.0f, 0.0f, 0.0f, 0.0f);
+    
+    float3 lightVec = L.Position - posW;
+    
+    float d = length(lightVec);
+    
+    if (d > L.Range)
+        return;
+    
+    lightVec = d;
+    
+    ambient = mat.Ambient * L.Ambient;
+    
+    float diffuseFactor = dot(lightVec, normal);
+    
+    // Flatten avoid dynamic branching.
+    [flatten]
+    if (diffuseFactor > 0.0f)
+    {
+        float3 v = reflect(lightVec, normal);
+        float specFactor = pow(max(dot(v, toEye), 0.0f), mat.Specular.w);
+        
+        diffuse = diffuseFactor * mat.Diffuse * L.Diffuse;
+        spec = specFactor * mat.Specular * L.Specular;
+        
+         // Attenuate
+        float att = 1.0f / dot(L.Att, float3(1.0f, d, d * d));
+        diffuse *= att;
+        spec *= att;
+    }
+}
+
+void ComputeSpotLight(Material mat, SpotLight L, float3 posW, float3 normal, float3 toEye, out float4 ambient, out float4 diffuse, out float4 spec)
+{
+    ambient = float4(0.0f, 0.0f, 0.0f, 0.0f);
+    diffuse = float4(0.0f, 0.0f, 0.0f, 0.0f);
+    spec = float4(0.0f, 0.0f, 0.0f, 0.0f);
+    
+    float3 lightVec = L.Position - posW;
+    
+    float d = length(lightVec);
+    
+    if (d > L.Range)
+        return;
+
+    lightVec /= d;
+    
+    ambient = mat.Ambient * L.Ambient;
+    
+    float diffuseFactor = dot(lightVec, normal);
+    
+    [flatten]
+    if (diffuseFactor > 0.0f)
+    {
+        float3 v = reflect(lightVec, normal);
+        float specFactor = pow(max(dot(v, toEye), 0.0f), L.Specular.w);
+        
+        spec = specFactor * mat.Specular * L.Specular;
+        diffuse = diffuseFactor * mat.Diffuse * L.Diffuse;
+    }
+    
+    float spot = pow(max(dot(-lightVec, L.Direction), 0.0f), L.Spot);
+    float att = spot / dot(L.Att, float3(1.0f, d, d * d));
+    
+    ambient *= spot;
+    spec *= att;
+    diffuse *= att;
+}
+
 // 
 // vertex Shader
 //
-VS_OUTPUT VS(VS_INPUT input, uniform float3 l = float3(0.0f, -1.0f, 0.0f))
+VS_OUTPUT VS(VS_INPUT input)
 {
     VS_OUTPUT output = (VS_OUTPUT) 0;
+   
+    float4 posW = mul(float4(input.PosL, 1.0f), gWorld);
+    float3 normalW = mul(input.Normal, gWorld);
     
-    float4 p = float4(input.PosL, 1.0f);
-    float3 n = input.Normal;
-  
-    // local
-    //p.y += cos(gTime * 5.0f) * p.x * p.x * 0.2f;
+    float3 toEye = normalize(gEyePosW - posW.xyz);
     
-    // world
-    p = mul(p, gWorld);
-    n = mul(n,gWorld);
-
-    float spotLightAngle = radians(30.0f);
-    float3 spotLightDir = float3(1.0f, 0.0f, 0.0f);
-    float3 spotLightPos = float3(-30.0f, 0.0f, 0.0f);
+    float4 ambient;
+    float4 diffuse;
+    float4 spec;
     
-    // point light
-    l = p.xyz - gPointLightPos.xyz;
+    //ComputeDirectionalLight(gMaterial, gDirectionalLight, normalW, toEye, ambient, diffuse, spec);
+    //ComputePointLight(gMaterial, gPointLight, posW.xyz, normalW.xyz, toEye, ambient, diffuse, spec);
+    ComputeSpotLight(gMaterial, gSpotLight, posW.xyz, normalW.xyz, toEye, ambient, diffuse, spec);
     
-    // spot light
-    //l = p.xyz - spotLightPos;
-    //float deltaAngle = dot(normalize(l), spotLightDir) - cos(spotLightAngle);
-    //deltaAngle = max(deltaAngle, 0.0f);
+    output.PosH = mul(posW, gViewProj);
+    output.Color = diffuse; //+ ambient + spec;
     
-    float distance = length(l);
-    // Diffuse, Specualr, Ambient
-    float3 viewDir = normalize(gEyePosW - p.xyz);
-    
-    float3 r = l + (n * (-2 * dot(n, l))); // reflection light direction
-    
-    float blinnPhong = max(dot(r, viewDir), 0); // birghtness (specular)
-    float lambert = max(dot(n, -l), 0); // brightness (diffuse)
-     
-    
-    
-                                    // diffuse color    // light diffuse color
-    float3 diffuse = lambert * input.Color.rgb * float3(1.0f, 1.0f, 1.0f);
-                                    // specular color   // light specular color
-    float3 specular = blinnPhong * input.Color.rgb * float3(1.0f, 1.0f, 1.0f);
-                                    // ambient color    // light ambient color
-    float3 ambient = float3(0.15f, 0.15f, 0.15f) * float3(1.0f, 1.0f, 1.0f);
-    // --------------
-    
-    float3 color = ambient + diffuse + specular;
-    // intensity decrease constants
-    float a0 = 0.3f;    // constant
-    float a1 = 0.15f;    // linear
-    float a2 = 0.15f;    // exponential
-    color /= (a0 + a1 * distance + a2 * pow(distance, 2));
-    
-    output.Color.rgb = color;
-    output.Color.a = 1.0f;
-    
-    output.PosH = mul(p, gViewProj);
     return output;
 }
 
 float4 PS(PS_INPUT input) : SV_Target
 {
-    return input.Color; 
+    return input.Color;
 }
 
 RasterizerState WireFrameRS

@@ -44,6 +44,11 @@ bool Graphics::Init(const HWND& hWnd)
 
 	bIsInited = true;
 
+	mDirLight.Ambient = { 0.3f,0.3f,0.3f,1.0f };
+	mDirLight.Diffuse = { 0.3f,0.3f,0.3f,1.0f };
+	mDirLight.Specular = { 1.0f,1.0f,1.0f, 1.0f };
+	mDirLight.Direction = { -0.7f,-0.7f,0.0f,1.0f};
+
 	return true;
 }
 
@@ -106,22 +111,6 @@ void Graphics::Render()
 	mD3DImmediateContext->IASetInputLayout(GeometryBuffers::mIL.Get());
 	mD3DImmediateContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-	// calculate light pos
-	XMFLOAT3 pointLightPos = {0.0f,0.0f,0.0f};
-	if (mPointLightObject)
-	{
-		pointLightPos = mPointLightObject->GetPosition();
-		XMFLOAT3 rotation = mPointLightObject->GetRotation();
-
-		XMMATRIX matRot = XMMatrixRotationRollPitchYaw(rotation.x, rotation.y, rotation.z);
-
-		XMVECTOR pos = XMLoadFloat3(&pointLightPos);
-		
-		pos = XMVector3Transform(pos, matRot);
-		
-		XMStoreFloat3(&pointLightPos, pos);
-	}
-
 	// calculate View matrix
 	XMFLOAT3 eyePos = mCameraObject->GetPosition();
 	XMVECTOR eyePosSIMD = XMLoadFloat3(&eyePos);
@@ -146,18 +135,27 @@ void Graphics::Render()
 		mD3DImmediateContext->IASetVertexBuffers(0, 1, buffers->mVB.GetAddressOf(), &stride, &offset);
 		mD3DImmediateContext->IASetIndexBuffer(buffers->mIB.Get(), DXGI_FORMAT_R32_UINT, 0);
 
-		// set point light
+		// set lights
+		buffers->mFX->GetVariableByName("gDirectionalLight")->SetRawValue(&mDirLight, 0, sizeof(mDirLight));
+		
 		if (mPointLightObject)
 		{
-			buffers->SetFloat3("gPointLightPos", (float*)&pointLightPos);
+			buffers->mFX->GetVariableByName("gPointLight")->SetRawValue(&mPointLight, 0, sizeof(mPointLight));
 		}
 
-		// set pass's constant 
+		if (mSpotLightObject)
+		{
+			buffers->mFX->GetVariableByName("gSpotLight")->SetRawValue(&mSpotLight, 0, sizeof(mSpotLight));
+		}
+
+		// set view porjection transform matrix
 		XMMATRIX vp = mView * mProjection;
 		buffers->mFX->GetVariableByName("gViewProj")->AsMatrix()->SetMatrix((float*)&vp);
 
+		// set eye position for specular lighting
 		XMFLOAT3 ep = mCameraObject->GetPosition();
 		buffers->SetFloat3("gEyePosW", (float*)&ep);
+
 
 		D3DX11_TECHNIQUE_DESC techDesc;
 		buffers->mTech->GetDesc(&techDesc);
@@ -479,12 +477,25 @@ void Graphics::BindPointLight(const IObject* object, PointLight& desc)
 	_ASSERT(object);
 
 	mPointLightObject = object;
-	mPointLightDesc = desc;
+	mPointLight = desc;
 }
 
 void Graphics::UnBindPointLight(const IObject* lightObject)
 {
 	mPointLightObject = nullptr;
+}
+
+void Graphics::BindSpotLight(const IObject* object, SpotLight& desc)
+{
+	_ASSERT(object);
+
+	mSpotLight = desc;
+	mSpotLightObject = object;
+}
+
+void Graphics::UnBindSpotLight(const IObject* lightObject)
+{
+	mSpotLightObject = nullptr;
 }
 
 void Graphics::BindCameraObject(const IObject* cameraObject)
@@ -537,3 +548,4 @@ HRESULT Graphics::CreateDepthStencilView()
 
 	return hr;
 }
+

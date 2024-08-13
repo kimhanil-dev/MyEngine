@@ -157,7 +157,7 @@
     <ClInclude Include="Source\Core\Object\CameraObject.h" />
     <ClInclude Include="Source\Core\Object\PointLightObject.h" />
     <ClInclude Include="Source\Core\Object\Object.h" />
-    <ClInclude Include="Source\Core\Render\Graphics\Lights\PointLight.h" />
+    <ClInclude Include="Source\Core\Render\Graphics\Material.h" />
     <ClInclude Include="Source\Utill\PerformanceTester.h" />
     <ClInclude Include="Source\Core\Math\MathHelper.h" />
     <ClInclude Include="Source\Core\Render\GeometryGenerator.h" />
@@ -199,7 +199,6 @@
     <ClCompile Include="Source\Core\Object\CameraObject.cpp" />
     <ClCompile Include="Source\Core\Object\PointLightObject.cpp" />
     <ClCompile Include="Source\Core\Object\Object.cpp" />
-    <ClCompile Include="Source\Core\Render\Graphics\IGeometryModifier.cpp" />
     <ClCompile Include="Source\Utill\PerformanceTester.cpp" />
     <ClCompile Include="Source\Core\Render\GeometryGenerator.cpp" />
     <ClCompile Include="Source\Game\Game.cpp" />

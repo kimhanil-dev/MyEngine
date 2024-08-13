@@ -12,7 +12,7 @@
 #include "Core/Object/Object.h"
 #include "IGeometryModifier.h"
 
-#include "Lights/PointLight.h"
+#include "Material.h"
 
 
 using namespace std;
@@ -31,7 +31,18 @@ struct GeometryBuffers : public IGeometryDynamicModifier
 
 	static Microsoft::WRL::ComPtr<ID3D11InputLayout> mIL;
 
-	virtual void SetFloat(const char* name, const float& value)
+
+	virtual void SetRaw(const char* name, const void* data, const size_t byteSize) override
+	{
+		assert(mFX);
+
+		if (auto var = mFX->GetVariableByName(name))
+		{
+			var->SetRawValue(data, 0, byteSize);
+		}
+	}
+
+	virtual void SetFloat(const char* name, const float& value) override
 	{
 		assert(mFX);
 
@@ -121,14 +132,21 @@ private:
 	weak_ptr<IGeometryModifier> BindMesh(Mesh* mesh) override;
 	weak_ptr<IGeometryDynamicModifier> BindMeshDynamic(Mesh* mesh) override;
 
-	const IObject* mCameraObject;
+	const IObject* mCameraObject		= nullptr;
+	const IObject* mPointLightObject	= nullptr;
+	const IObject* mSpotLightObject		= nullptr;
 
-	const IObject* mPointLightObject;
-	PointLight mPointLightDesc;
+	// lights
+	DirectionLight mDirLight;
+	PointLight mPointLight;
+	SpotLight mSpotLight;
 
 	// IGraphics을(를) 통해 상속됨
 	void BindPointLight(const IObject* object, PointLight& desc) override;
 	void UnBindPointLight(const IObject* lightObject) override;
+
+	void BindSpotLight(const IObject* object, SpotLight& desc) override;
+	void UnBindSpotLight(const IObject* lightObject) override;
 
 	// IGraphics을(를) 통해 상속됨
 	void BindCameraObject(const IObject* cameraObject) override;

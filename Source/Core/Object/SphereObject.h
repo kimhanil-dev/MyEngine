@@ -24,5 +24,6 @@ public:
 
     void Destroy() override;
 
+    float mLocalTotalTime = 0.0f;
 };
 

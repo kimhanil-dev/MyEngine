@@ -5,7 +5,7 @@
 
 #include "Core/Types.h"	
 
-#include "Lights/PointLight.h"
+#include "Material.h"
 
 class IObject;
 class IGeometryModifier;
@@ -29,6 +29,9 @@ public:
 
 	virtual void BindCameraObject(const IObject* cameraObject) = 0;
 	virtual void UnBindCameraObject(const IObject* cameraObject) = 0;
+
+	virtual void BindSpotLight(const IObject* object, SpotLight& desc) = 0;
+	virtual void UnBindSpotLight(const IObject* lightObject)  = 0;
 
 	virtual void BindPointLight(const IObject* object, PointLight& desc) = 0;
 	virtual void UnBindPointLight(const IObject* lightObject) = 0;
