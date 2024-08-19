@@ -3,6 +3,7 @@
 
 #include <math.h>
 #include <algorithm>
+#include <array>
 
 void GeometryGenerator::CreateGrid(float width, float depth, UINT m, UINT n, Mesh& outMesh)
 {
@@ -27,7 +28,6 @@ void GeometryGenerator::CreateGrid(float width, float depth, UINT m, UINT n, Mes
 			float x = -halfWidth + k * dx;
 			UINT index = i * n + k;
 			outMesh.Vertices[index].Position = XMFLOAT3(x, 0.0f, z);
-			outMesh.Vertices[index].Color = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
 			outMesh.Vertices[index].Normal = XMFLOAT3(0.0f,1.0f,0.0f);
 			outMesh.Vertices[index].UV = XMFLOAT2(k * du, i * dv);
 		}
@@ -183,22 +183,22 @@ void GeometryGenerator::CreateGeosphere(const XMFLOAT4& color, float radius, UIN
 	const float x = 0.525731f;
 	const float z = 0.850651f;
 
-	const size_t vtxCount = 12;
-
-	vector<XMFLOAT3> vtxPoses = {
-		{-x,0.0f,z},{x,0.0f,z},
-		{-x,0.0f,-z},{x,0.0f,-z},
-		{0.0f,z,x}, {0.0f,z,-x},
-		{0.0f,-z,x},{0.0f,-z,-x},
-		{z,x,0.0f}, {-z,x,0.0f},
-		{z,-x,0.0f},{-z,-x,0.0f},
+	array<XMFLOAT3, 12> vtxPoses = 
+	{
+		XMFLOAT3(-x,0.0f,z), XMFLOAT3(x,0.0f,z),
+		XMFLOAT3(-x,0.0f,-z),XMFLOAT3(x,0.0f,-z),
+		XMFLOAT3(0.0f,z,x),  XMFLOAT3(0.0f,z,-x),
+		XMFLOAT3(0.0f,-z,x), XMFLOAT3(0.0f,-z,-x),
+		XMFLOAT3(z,x,0.0f),  XMFLOAT3(-z,x,0.0f),
+		XMFLOAT3(z,-x,0.0f), XMFLOAT3(-z,-x,0.0f),
 	};
 
+	size_t vtxCount = vtxPoses.size();
+
 	outMesh.Vertices.reserve(vtxCount);
-	for (size_t i = 0; i < vtxCount; ++i)
-	{
-		outMesh.Vertices.push_back({ vtxPoses[i],color});
-	}
+	ranges::for_each(vtxPoses, [&outMesh](const XMFLOAT3& v) {
+		outMesh.Vertices.push_back({ v,{0.0f,0.0f,0.0f}, {0.0f,0.0f} });
+		});
 
 	outMesh.Indices = {
 		1,4,0, 4,9,0, 4,5,9, 8,5,4, 1,8,4,
@@ -238,17 +238,12 @@ static void Interpolate(const Vertex& from, const Vertex& to, float delta, Verte
 	XMVECTOR toPos = XMLoadFloat3(&to.Position);
 	XMVECTOR pos = fromPos + (toPos - fromPos) * delta;
 
-	XMVECTOR fromColor = XMLoadFloat4(&from.Color);
-	XMVECTOR toColor = XMLoadFloat4(&to.Color);
-	XMVECTOR color = (fromColor * (1.0f - delta)) + (toColor * (delta));
-
 	XMVECTOR fromNormal = XMLoadFloat3(&from.Normal);
 	XMVECTOR toNormal = XMLoadFloat3(&to.Normal);
 	XMVECTOR normal = (fromNormal * (1.0f - delta)) + (toNormal * (delta));
 	normal = XMVector3Normalize(normal);
 
 	XMStoreFloat3(&out.Position, pos);
-	XMStoreFloat4(&out.Color, color);
 	XMStoreFloat3(&out.Normal, normal);
 }
 

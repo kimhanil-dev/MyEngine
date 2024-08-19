@@ -17,7 +17,6 @@ struct SimpleVertex
 	XMFLOAT3 Normal;
 	XMFLOAT2 Tex0;
 	XMFLOAT2 Tex1;
-	XMFLOAT4 Color;
 };
 
 struct ConstantBuffer
@@ -44,9 +43,9 @@ bool Graphics::Init(const HWND& hWnd)
 
 	bIsInited = true;
 
-	mDirLight.Ambient = { 0.3f,0.3f,0.3f,1.0f };
-	mDirLight.Diffuse = { 0.3f,0.3f,0.3f,1.0f };
-	mDirLight.Specular = { 1.0f,1.0f,1.0f, 1.0f };
+	mDirLight.Ambient = { 0.5f,0.5f,0.5f,1.0f };
+	mDirLight.Diffuse = { 0.5f,0.5f,0.5f,1.0f };
+	mDirLight.Specular = { 0.2f,0.2f,0.2f, 1.0f };
 	mDirLight.Direction = { -0.7f,-0.7f,0.0f,1.0f};
 
 	return true;
@@ -336,7 +335,6 @@ HRESULT Graphics::BuildGeometryBuffers(const Mesh* inMesh, GeometryBuffers& outG
 		vertices[index].Normal = v.Normal;
 		vertices[index].Tex0 = v.UV;
 		// tex1
-		vertices[index].Color = v.Color;
 
 		++index;
 	}
@@ -380,7 +378,6 @@ HRESULT Graphics::BuildVertexLayout(GeometryBuffers& geometryBuffers)
 		{ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 24, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 36, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 		{ "TEXCOORD", 1, DXGI_FORMAT_R32G32_FLOAT, 0, 44, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-		{ "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 52, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 	};
 	uint numElements = ARRAYSIZE(layout);
 
@@ -405,7 +402,7 @@ HRESULT Graphics::BuildFX(GeometryBuffers& outGeomtryBuffers)
 	IF_FAILED_RET(D3DX11CreateEffectFromMemory((LPVOID)&compiledShader[0],
 		compiledShader.size(), NULL, mD3DDevice.Get(), outGeomtryBuffers.mFX.GetAddressOf()));
 
-	outGeomtryBuffers.mTech = outGeomtryBuffers.mFX->GetTechniqueByName("ColorTech");
+	outGeomtryBuffers.mTech = outGeomtryBuffers.mFX->GetTechniqueByName("LightTech");
 
 	return S_OK;
 }

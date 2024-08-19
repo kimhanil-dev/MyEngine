@@ -39,7 +39,7 @@ fxgroup
     //
     // 1 technique(s)
     //
-    technique11 ColorTech
+    technique11 LightTech
     {
         pass P0
         {
@@ -65,7 +65,7 @@ fxgroup
                 //       float4 Diffuse;                // Offset:  160
                 //       float4 Specular;               // Offset:  176
                 //
-                //   } gMaterial;                       // Offset:  144 Size:    48
+                //   } gMaterial;                       // Offset:  144 Size:    48 [unused]
                 //   
                 //   struct DirectionalLight
                 //   {
@@ -103,7 +103,7 @@ fxgroup
                 //       float3 Direction;              // Offset:  416
                 //       float Spot;                    // Offset:  428
                 //
-                //   } gSpotLight;                      // Offset:  336 Size:    96
+                //   } gSpotLight;                      // Offset:  336 Size:    96 [unused]
                 //
                 // }
                 //
@@ -125,7 +125,6 @@ fxgroup
                 // NORMAL                   0   xyz         2     NONE   float   xyz 
                 // TEXCOORD                 0   xy          3     NONE   float       
                 // TEXCOORD                 1   xy          4     NONE   float       
-                // COLOR                    0   xyzw        5     NONE   float       
                 //
                 //
                 // Output signature:
@@ -133,16 +132,20 @@ fxgroup
                 // Name                 Index   Mask Register SysValue  Format   Used
                 // -------------------- ----- ------ -------- -------- ------- ------
                 // SV_POSITION              0   xyzw        0      POS   float   xyzw
-                // COLOR                    0   xyzw        1     NONE   float   xyzw
+                // POSITION                 0   xyz         1     NONE   float   xyz 
+                // NORMAL                   0   xyz         2     NONE   float   xyz 
+                // COLOR                    0   xyzw        3     NONE   float   xyzw
                 //
                 vs_5_0
                 dcl_globalFlags refactoringAllowed | skipOptimization
-                dcl_constantbuffer CB0[27], immediateIndexed
+                dcl_constantbuffer CB0[8], immediateIndexed
                 dcl_input v0.xyz
                 dcl_input v2.xyz
                 dcl_output_siv o0.xyzw, position
-                dcl_output o1.xyzw
-                dcl_temps 9
+                dcl_output o1.xyz
+                dcl_output o2.xyz
+                dcl_output o3.xyzw
+                dcl_temps 4
                 //
                 // Initial variable locations:
                 //   v0.x <- input.PosL.x; v0.y <- input.PosL.y; v0.z <- input.PosL.z; 
@@ -150,106 +153,113 @@ fxgroup
                 //   v2.x <- input.Normal.x; v2.y <- input.Normal.y; v2.z <- input.Normal.z; 
                 //   v3.x <- input.Tex0.x; v3.y <- input.Tex0.y; 
                 //   v4.x <- input.Tex1.x; v4.y <- input.Tex1.y; 
-                //   v5.x <- input.Color.x; v5.y <- input.Color.y; v5.z <- input.Color.z; v5.w <- input.Color.w; 
-                //   o1.x <- <VS return value>.Color.x; o1.y <- <VS return value>.Color.y; o1.z <- <VS return value>.Color.z; o1.w <- <VS return value>.Color.w; 
+                //   o3.x <- <VS return value>.Color.x; o3.y <- <VS return value>.Color.y; o3.z <- <VS return value>.Color.z; o3.w <- <VS return value>.Color.w; 
+                //   o2.x <- <VS return value>.NormalW.x; o2.y <- <VS return value>.NormalW.y; o2.z <- <VS return value>.NormalW.z; 
+                //   o1.x <- <VS return value>.PosW.x; o1.y <- <VS return value>.PosW.y; o1.z <- <VS return value>.PosW.z; 
                 //   o0.x <- <VS return value>.PosH.x; o0.y <- <VS return value>.PosH.y; o0.z <- <VS return value>.PosH.z; o0.w <- <VS return value>.PosH.w
                 //
-                #line 199 "D:\kimhanil\MyEngine\Shader\color.hlsl"
-                mov r0.xyz, v0.xyzx
-                mov r0.w, l(1.000000)
-                dp4 r1.x, r0.xyzw, cb0[0].xyzw  // r1.x <- posW.x
-                dp4 r1.y, r0.xyzw, cb0[1].xyzw  // r1.y <- posW.y
-                dp4 r1.z, r0.xyzw, cb0[2].xyzw  // r1.z <- posW.z
-                dp4 r1.w, r0.xyzw, cb0[3].xyzw  // r1.w <- posW.w
+                #line 191 "D:\kimhanil\MyEngine\Shader\color.hlsl"
+                itof r0.xyzw, l(0, 0, 0, 0)  // r0.x <- output.Color.x; r0.y <- output.Color.y; r0.z <- output.Color.z; r0.w <- output.Color.w
+                
+                #line 194
+                mov r1.xyz, v0.xyzx
+                mov r1.w, l(1.000000)
+                dp4 r2.x, r1.xyzw, cb0[0].xyzw  // r2.x <- output.PosW.x
+                dp4 r2.y, r1.xyzw, cb0[1].xyzw  // r2.y <- output.PosW.y
+                dp4 r2.z, r1.xyzw, cb0[2].xyzw  // r2.z <- output.PosW.z
+                
+                #line 195
+                dp3 r1.x, v2.xyzx, cb0[0].xyzx  // r1.x <- output.NormalW.x
+                dp3 r1.y, v2.xyzx, cb0[1].xyzx  // r1.y <- output.NormalW.y
+                dp3 r1.z, v2.xyzx, cb0[2].xyzx  // r1.z <- output.NormalW.z
+                
+                #line 198
+                mov r2.w, l(1.000000)
+                dp4 r3.x, r2.xyzw, cb0[4].xyzw  // r3.x <- output.PosH.x
+                dp4 r3.y, r2.xyzw, cb0[5].xyzw  // r3.y <- output.PosH.y
+                dp4 r3.z, r2.xyzw, cb0[6].xyzw  // r3.z <- output.PosH.z
+                dp4 r3.w, r2.xyzw, cb0[7].xyzw  // r3.w <- output.PosH.w
                 
                 #line 200
-                dp3 r0.x, v2.xyzx, cb0[0].xyzx  // r0.x <- normalW.x
-                dp3 r0.y, v2.xyzx, cb0[1].xyzx  // r0.y <- normalW.y
-                dp3 r0.z, v2.xyzx, cb0[2].xyzx  // r0.z <- normalW.z
-                
-                #line 210
-                nop 
-                mov r2.xyzw, cb0[10].xyzw
-                mov r3.xyzw, cb0[22].xyzw
-                mov r4.xyz, cb0[24].xyzx
-                mov r5.xyz, cb0[25].xyzx
-                mov r6.xyz, cb0[26].xyzx
-                mov r0.w, cb0[24].w
-                mov r4.w, cb0[26].w
-                mov r1.xyz, r1.xyzx
-                mov r0.xyz, r0.xyzx
-                
-                #line 158
-                mov r7.xyzw, l(0,0,0,0)  // r7.x <- diffuse.x; r7.y <- diffuse.y; r7.z <- diffuse.z; r7.w <- diffuse.w
-                
-                #line 161
-                mov r8.xyz, -r1.xyzx
-                add r4.xyz, r4.xyzx, r8.xyzx  // r4.x <- lightVec.x; r4.y <- lightVec.y; r4.z <- lightVec.z
-                
-                #line 163
-                dp3 r5.w, r4.xyzx, r4.xyzx
-                sqrt r8.y, r5.w  // r8.y <- d
-                
-                #line 165
-                lt r0.w, r0.w, r8.y
-                
-                #line 168
-                if_z r0.w
-                  div r4.xyz, r4.xyzx, r8.yyyy
-                
-                #line 172
-                  dp3 r0.x, r4.xyzx, r0.xyzx  // r0.x <- diffuseFactor
-                
-                #line 175
-                  lt r0.y, l(0.000000), r0.x
-                
-                #line 181
-                  mul r2.xyzw, r2.xyzw, r0.xxxx
-                  mul r2.xyzw, r3.xyzw, r2.xyzw  // r2.x <- diffuse.x; r2.y <- diffuse.y; r2.z <- diffuse.z; r2.w <- diffuse.w
-                
-                #line 182
-                  movc r0.xyzw, r0.yyyy, r2.xyzw, r7.xyzw  // r0.x <- diffuse.x; r0.y <- diffuse.y; r0.z <- diffuse.z; r0.w <- diffuse.w
-                
-                #line 184
-                  mov r2.xyz, -r4.xyzx
-                  dp3 r2.x, r2.xyzx, r6.xyzx
-                  max r2.x, r2.x, l(0.000000)
-                  log r2.x, r2.x
-                  mul r2.x, r2.x, r4.w
-                  exp r2.x, r2.x  // r2.x <- spot
-                
-                #line 185
-                  mul r8.z, r8.y, r8.y
-                  mov r8.x, l(1.000000)
-                  dp3 r2.y, r5.xyzx, r8.xyzx
-                  div r2.x, r2.x, r2.y  // r2.x <- att
-                
-                #line 189
-                  mul r7.xyzw, r0.xyzw, r2.xxxx  // r7.x <- diffuse.x; r7.y <- diffuse.y; r7.z <- diffuse.z; r7.w <- diffuse.w
-                endif 
-                
-                #line 210
-                mov r7.xyzw, r7.xyzw  // r7.x <- diffuse.x; r7.y <- diffuse.y; r7.z <- diffuse.z; r7.w <- diffuse.w
-                
-                #line 212
-                dp4 r0.x, r1.xyzw, cb0[4].xyzw  // r0.x <- output.PosH.x
-                dp4 r0.y, r1.xyzw, cb0[5].xyzw  // r0.y <- output.PosH.y
-                dp4 r0.z, r1.xyzw, cb0[6].xyzw  // r0.z <- output.PosH.z
-                dp4 r0.w, r1.xyzw, cb0[7].xyzw  // r0.w <- output.PosH.w
-                
-                #line 213
-                mov r7.xyzw, r7.xyzw  // r7.x <- output.Color.x; r7.y <- output.Color.y; r7.z <- output.Color.z; r7.w <- output.Color.w
-                
-                #line 215
-                mov o0.xyzw, r0.xyzw
-                mov o1.xyzw, r7.xyzw
+                mov o0.xyzw, r3.xyzw
+                mov o3.xyzw, r0.xyzw
+                mov o1.xyz, r2.xyzx
+                mov o2.xyz, r1.xyzx
                 ret 
-                // Approximately 53 instruction slots used
+                // Approximately 19 instruction slots used
                             
             };
+            GeometryShader = NULL;
             PixelShader = asm {
                 //
                 // Generated by Microsoft (R) HLSL Shader Compiler 10.1
+                //
+                //
+                // Buffer Definitions: 
+                //
+                // cbuffer cbPerObject
+                // {
+                //
+                //   float4x4 gWorld;                   // Offset:    0 Size:    64 [unused]
+                //   float4x4 gViewProj;                // Offset:   64 Size:    64 [unused]
+                //   float3 gEyePosW;                   // Offset:  128 Size:    12 [unused]
+                //   float gTime;                       // Offset:  140 Size:     4 [unused]
+                //   
+                //   struct Material
+                //   {
+                //       
+                //       float4 Ambient;                // Offset:  144
+                //       float4 Diffuse;                // Offset:  160
+                //       float4 Specular;               // Offset:  176
+                //
+                //   } gMaterial;                       // Offset:  144 Size:    48
+                //   
+                //   struct DirectionalLight
+                //   {
+                //       
+                //       float4 Ambient;                // Offset:  192
+                //       float4 Diffuse;                // Offset:  208
+                //       float4 Specular;               // Offset:  224
+                //       float4 Direction;              // Offset:  240
+                //
+                //   } gDirectionalLight;               // Offset:  192 Size:    64
+                //   
+                //   struct PointLight
+                //   {
+                //       
+                //       float4 Ambient;                // Offset:  256
+                //       float4 Diffuse;                // Offset:  272
+                //       float4 Specular;               // Offset:  288
+                //       float3 Position;               // Offset:  304
+                //       float Range;                   // Offset:  316
+                //       float3 Att;                    // Offset:  320
+                //       float pad;                     // Offset:  332
+                //
+                //   } gPointLight;                     // Offset:  256 Size:    80 [unused]
+                //   
+                //   struct SpotLight
+                //   {
+                //       
+                //       float4 Ambient;                // Offset:  336
+                //       float4 Diffuse;                // Offset:  352
+                //       float4 Specular;               // Offset:  368
+                //       float3 Position;               // Offset:  384
+                //       float Range;                   // Offset:  396
+                //       float3 Att;                    // Offset:  400
+                //       float pad;                     // Offset:  412
+                //       float3 Direction;              // Offset:  416
+                //       float Spot;                    // Offset:  428
+                //
+                //   } gSpotLight;                      // Offset:  336 Size:    96 [unused]
+                //
+                // }
+                //
+                //
+                // Resource Bindings:
+                //
+                // Name                                 Type  Format         Dim      HLSL Bind  Count
+                // ------------------------------ ---------- ------- ----------- -------------- ------
+                // cbPerObject                       cbuffer      NA          NA            cb0      1 
                 //
                 //
                 //
@@ -257,8 +267,10 @@ fxgroup
                 //
                 // Name                 Index   Mask Register SysValue  Format   Used
                 // -------------------- ----- ------ -------- -------- ------- ------
-                // SV_Position              0   xyzw        0      POS   float       
-                // COLOR                    0   xyzw        1     NONE   float   xyzw
+                // SV_POSITION              0   xyzw        0      POS   float       
+                // POSITION                 0   xyz         1     NONE   float       
+                // NORMAL                   0   xyz         2     NONE   float   xyz 
+                // COLOR                    0   xyzw        3     NONE   float       
                 //
                 //
                 // Output signature:
@@ -269,18 +281,97 @@ fxgroup
                 //
                 ps_5_0
                 dcl_globalFlags refactoringAllowed | skipOptimization
-                dcl_input_ps linear v1.xyzw
+                dcl_constantbuffer CB0[16], immediateIndexed
+                dcl_input_ps linear v2.xyz
                 dcl_output o0.xyzw
+                dcl_temps 6
                 //
                 // Initial variable locations:
-                //   v0.x <- input.Pos.x; v0.y <- input.Pos.y; v0.z <- input.Pos.z; v0.w <- input.Pos.w; 
-                //   v1.x <- input.Color.x; v1.y <- input.Color.y; v1.z <- input.Color.z; v1.w <- input.Color.w; 
+                //   v0.x <- input.PosH.x; v0.y <- input.PosH.y; v0.z <- input.PosH.z; v0.w <- input.PosH.w; 
+                //   v1.x <- input.PosW.x; v1.y <- input.PosW.y; v1.z <- input.PosW.z; 
+                //   v2.x <- input.NormalW.x; v2.y <- input.NormalW.y; v2.z <- input.NormalW.z; 
+                //   v3.x <- input.Color.x; v3.y <- input.Color.y; v3.z <- input.Color.z; v3.w <- input.Color.w; 
                 //   o0.x <- <PS return value>.x; o0.y <- <PS return value>.y; o0.z <- <PS return value>.z; o0.w <- <PS return value>.w
                 //
-                #line 220 "D:\kimhanil\MyEngine\Shader\color.hlsl"
-                mov o0.xyzw, v1.xyzw
+                #line 207 "D:\kimhanil\MyEngine\Shader\color.hlsl"
+                dp3 r0.x, v2.xyzx, v2.xyzx
+                rsq r0.x, r0.x
+                mul r0.xyz, r0.xxxx, v2.xyzx  // r0.x <- input.NormalW.x; r0.y <- input.NormalW.y; r0.z <- input.NormalW.z
+                
+                #line 212
+                mov r1.xyz, l(0,0,0,0)  // r1.x <- diffuse.x; r1.y <- diffuse.y; r1.z <- diffuse.z
+                
+                #line 217
+                nop 
+                mov r2.xyz, cb0[10].xyzx
+                mov r3.xyz, cb0[13].xyzx
+                mov r4.xyz, cb0[15].xyzx
+                mov r0.xyz, r0.xyzx
+                
+                #line 93
+                mov r5.xyz, l(0,0,0,0)  // r5.x <- diffuse.x; r5.y <- diffuse.y; r5.z <- diffuse.z
+                
+                #line 96
+                mov r4.xyz, -r4.xyzx  // r4.x <- lightVec.x; r4.y <- lightVec.y; r4.z <- lightVec.z
+                
+                #line 100
+                dp3 r0.x, r4.xyzx, r0.xyzx  // r0.x <- diffuseFactor
+                
+                #line 103
+                lt r0.y, l(0.000000), r0.x
+                
+                #line 108
+                mul r0.xzw, r2.xxyz, r0.xxxx
+                mul r0.xzw, r3.xxyz, r0.xxzw  // r0.x <- diffuse.x; r0.z <- diffuse.y; r0.w <- diffuse.z
+                
+                #line 110
+                movc r0.xyz, r0.yyyy, r0.xzwx, r5.xyzx  // r0.y <- diffuse.y; r0.z <- diffuse.z
+                
+                #line 217
+                mov r0.xyz, r0.xyzx  // r0.x <- D.x; r0.y <- D.y; r0.z <- D.z
+                
+                #line 219
+                add r0.xyz, r0.xyzx, r1.xyzx  // r0.x <- diffuse.x; r0.y <- diffuse.y; r0.z <- diffuse.z
+                
+                #line 230
+                dp3 r0.w, r0.xyzx, r0.xyzx
+                sqrt r0.w, r0.w  // r0.w <- diffuseFactor
+                
+                #line 231
+                lt r1.x, l(0.000000), r0.w
+                if_nz r1.x
+                
+                #line 233
+                  div r1.xyz, r0.xyzx, r0.wwww  // r1.x <- diffuse.x; r1.y <- diffuse.y; r1.z <- diffuse.z
+                
+                #line 235
+                  mov r1.w, l(0.500000)  // r1.w <- divider
+                
+                #line 236
+                  mul r0.w, r0.w, l(4.000000)
+                
+                #line 238
+                  mul r0.w, r1.w, r0.w
+                  round_ni r0.w, r0.w
+                  mul r0.w, r1.w, r0.w  // r0.w <- diffuseFactor
+                
+                #line 239
+                  mul r0.xyz, r0.wwww, r1.xyzx  // r0.x <- diffuse.x; r0.y <- diffuse.y; r0.z <- diffuse.z
+                
+                #line 240
+                endif 
+                
+                #line 242
+                mov r0.xyz, r0.xyzx  // r0.x <- litColor.x; r0.y <- litColor.y; r0.z <- litColor.z
+                
+                #line 244
+                mov r0.w, cb0[10].w  // r0.w <- litColor.w
+                
+                #line 245
+                mov o0.xyz, r0.xyzx
+                mov o0.w, r0.w
                 ret 
-                // Approximately 2 instruction slots used
+                // Approximately 35 instruction slots used
                             
             };
             RasterizerState = SolidRS;

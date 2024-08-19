@@ -69,24 +69,18 @@ struct VS_INPUT
 {
     float3 PosL : POSITION;
     float3 Tangent : TANGENT0;
-    float3 Normal : NORMAL0;
+    float3 Normal : NORMAL;
     float2 Tex0 : TEXCOORD0;
     float2 Tex1 : TEXCOORD1;
-    float4 Color : COLOR0;
 };
 
 struct VS_OUTPUT
 {
     float4 PosH : SV_POSITION;
+    float3 PosW : POSITION;
+    float3 NormalW : NORMAL;
     float4 Color : COLOR0;
 };
-
-struct PS_INPUT
-{
-    float4 Pos : SV_Position;
-    float4 Color : COLOR0;
-};
-
 
 float random(float2 uv)
 {
@@ -129,7 +123,7 @@ void ComputePointLight(Material mat, PointLight L, float3 posW, float3 normal, f
     if (d > L.Range)
         return;
     
-    lightVec = d;
+    lightVec /= d;
     
     ambient = mat.Ambient * L.Ambient;
     
@@ -195,29 +189,60 @@ void ComputeSpotLight(Material mat, SpotLight L, float3 posW, float3 normal, flo
 VS_OUTPUT VS(VS_INPUT input)
 {
     VS_OUTPUT output = (VS_OUTPUT) 0;
-   
-    float4 posW = mul(float4(input.PosL, 1.0f), gWorld);
-    float3 normalW = mul(input.Normal, gWorld);
+  
+    // Transform to world space space.
+    output.PosW = mul(float4(input.PosL, 1.0f), gWorld).xyz;
+    output.NormalW = mul(input.Normal, (float3x3) gWorld);
     
-    float3 toEye = normalize(gEyePosW - posW.xyz);
-    
-    float4 ambient;
-    float4 diffuse;
-    float4 spec;
-    
-    //ComputeDirectionalLight(gMaterial, gDirectionalLight, normalW, toEye, ambient, diffuse, spec);
-    //ComputePointLight(gMaterial, gPointLight, posW.xyz, normalW.xyz, toEye, ambient, diffuse, spec);
-    ComputeSpotLight(gMaterial, gSpotLight, posW.xyz, normalW.xyz, toEye, ambient, diffuse, spec);
-    
-    output.PosH = mul(posW, gViewProj);
-    output.Color = diffuse; //+ ambient + spec;
-    
+    // Transform to homogeneous clip space.
+    output.PosH = mul(float4(output.PosW, 1.0f), gViewProj);
+  
     return output;
 }
 
-float4 PS(PS_INPUT input) : SV_Target
+float4 PS(VS_OUTPUT input) : SV_Target
 {
-    return input.Color;
+    // Interpolating noormal can unnormalize it, so normalize it.
+        // Rasterizer의 Interpolating은 linear interpolation이므로 input.NormalW의 길이는 1이 아니다(Normal은 sin, cos을 통해 얻어지는 구형 공간의 값)
+    input.NormalW = normalize(input.NormalW);
+    float3 toEyeW = normalize(gEyePosW - input.PosW);
+    
+    // Start with a sum of zero.
+    float4 ambient = float4(0.0f, 0.0f, 0.0f, 0.0f);
+    float4 diffuse = float4(0.0f, 0.0f, 0.0f, 0.0f);
+    float4 spec = float4(0.0f, 0.0f, 0.0f, 0.0f);
+    
+    // Sum the light contribution from each right source.
+    float4 A, D, S;
+    ComputeDirectionalLight(gMaterial, gDirectionalLight, input.NormalW, toEyeW, A, D, S);
+    ambient += A;
+    diffuse += D;
+    spec += S;
+    //ComputePointLight(gMaterial, gPointLight,input.PosW, input.NormalW, toEyeW, A, D, S);
+    //ambient += A;
+    //diffuse += D;
+    //spec += S;
+    //ComputeSpotLight(gMaterial, gSpotLight, input.PosW, input.NormalW, toEyeW, A,D,S);
+    //ambient += A;
+    //diffuse += D;
+    //spec += S;
+    
+    float diffuseFactor = length(diffuse.rgb);
+    if(diffuseFactor > 0.0f)
+    {
+        diffuse.rgb = diffuse.rgb / diffuseFactor;
+    
+        float divider = 1.0f / 2.0f;
+        diffuseFactor *= 2.0f * 2.0f;
+        
+        diffuseFactor = floor(diffuseFactor * divider) * divider;
+        diffuse.rgb = diffuse.rgb * diffuseFactor;
+    }
+    
+    float4 litColor = diffuse; // ambient + diffuse + spec;
+    //Common to take alpha from diffuse material.
+    litColor.a = gMaterial.Diffuse.a;
+    return litColor;
 }
 
 RasterizerState WireFrameRS
@@ -236,11 +261,12 @@ RasterizerState SolidRS
     // Default values used for any properties we do not set.
 };
 
-technique11 ColorTech
+technique11 LightTech
 {
     pass P0
     {
         SetVertexShader(CompileShader(vs_5_0, VS()));
+        SetGeometryShader(NULL);
         SetPixelShader(CompileShader(ps_5_0, PS()));
         SetRasterizerState(SolidRS);
     }

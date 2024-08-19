@@ -32,10 +32,9 @@ struct GeometryBuffers : public IGeometryDynamicModifier
 	static Microsoft::WRL::ComPtr<ID3D11InputLayout> mIL;
 
 
-	virtual void SetRaw(const char* name, const void* data, const size_t byteSize) override
+	virtual void SetRaw(const char* name, const void* data, const uint32_t byteSize) override
 	{
 		assert(mFX);
-
 		if (auto var = mFX->GetVariableByName(name))
 		{
 			var->SetRawValue(data, 0, byteSize);

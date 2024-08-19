@@ -10,10 +10,11 @@
 
 void SphereObject::Init(IGraphics* const renderer)
 {
+
 	GeometryGenerator geoGen;
 
 	Mesh geoSphere;
-	geoGen.CreateGeosphere({ 0.5f,1.0f,1.0f,1.0f }, 10.0f, 5, geoSphere);
+	geoGen.CreateGeosphere({ 0.5f,1.0f,1.0f,1.0f }, 10.0f, 3, geoSphere);
 
 	Material material;
 	material.Diffuse = { 0.3f, 0.3f, 1.0f, 1.0f };
