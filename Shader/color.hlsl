@@ -218,28 +218,28 @@ float4 PS(VS_OUTPUT input) : SV_Target
     ambient += A;
     diffuse += D;
     spec += S;
-    //ComputePointLight(gMaterial, gPointLight,input.PosW, input.NormalW, toEyeW, A, D, S);
-    //ambient += A;
-    //diffuse += D;
-    //spec += S;
-    //ComputeSpotLight(gMaterial, gSpotLight, input.PosW, input.NormalW, toEyeW, A,D,S);
-    //ambient += A;
-    //diffuse += D;
-    //spec += S;
+    ComputePointLight(gMaterial, gPointLight, input.PosW, input.NormalW, toEyeW, A, D, S);
+    ambient += A;
+    diffuse += D;
+    spec += S;
+    ComputeSpotLight(gMaterial, gSpotLight, input.PosW, input.NormalW, toEyeW, A, D, S);
+    ambient += A;
+    diffuse += D;
+    spec += S;
     
     float diffuseFactor = length(diffuse.rgb);
     if(diffuseFactor > 0.0f)
     {
         diffuse.rgb = diffuse.rgb / diffuseFactor;
     
-        float divider = 1.0f / 2.0f;
-        diffuseFactor *= 2.0f * 2.0f;
+        float divider = 1.0f / 3.0f;
+        diffuseFactor *= 3.0f * 3.0f;
         
         diffuseFactor = floor(diffuseFactor * divider) * divider;
         diffuse.rgb = diffuse.rgb * diffuseFactor;
     }
     
-    float4 litColor = diffuse; // ambient + diffuse + spec;
+    float4 litColor = ambient + diffuse + spec;
     //Common to take alpha from diffuse material.
     litColor.a = gMaterial.Diffuse.a;
     return litColor;

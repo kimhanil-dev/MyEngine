@@ -5,6 +5,8 @@
 #include "Core/Render/Graphics/IGeometryModifier.h"
 #include "Core/Render/GeometryGenerator.h"
 
+#include "Core/Input/InputManager.h"
+
 void PointLightObject::Init(IGraphics* const renderer)
 {
 	GeometryGenerator geoGen;
@@ -57,10 +59,13 @@ void PointLightObject::Update(float deltaTime)
 		rotation -= 360.0f;
 	}
 
+
 	mDeferredRotation = mForwardRotation;
 
+	
 	Object::Update(deltaTime);
 }
+
 
 void PointLightObject::BindKeyInput(InputManager* const inputManager)
 {

@@ -202,7 +202,7 @@ fxgroup
                 //
                 //   float4x4 gWorld;                   // Offset:    0 Size:    64 [unused]
                 //   float4x4 gViewProj;                // Offset:   64 Size:    64 [unused]
-                //   float3 gEyePosW;                   // Offset:  128 Size:    12 [unused]
+                //   float3 gEyePosW;                   // Offset:  128 Size:    12
                 //   float gTime;                       // Offset:  140 Size:     4 [unused]
                 //   
                 //   struct Material
@@ -235,7 +235,7 @@ fxgroup
                 //       float3 Att;                    // Offset:  320
                 //       float pad;                     // Offset:  332
                 //
-                //   } gPointLight;                     // Offset:  256 Size:    80 [unused]
+                //   } gPointLight;                     // Offset:  256 Size:    80
                 //   
                 //   struct SpotLight
                 //   {
@@ -250,7 +250,7 @@ fxgroup
                 //       float3 Direction;              // Offset:  416
                 //       float Spot;                    // Offset:  428
                 //
-                //   } gSpotLight;                      // Offset:  336 Size:    96 [unused]
+                //   } gSpotLight;                      // Offset:  336 Size:    96
                 //
                 // }
                 //
@@ -268,7 +268,7 @@ fxgroup
                 // Name                 Index   Mask Register SysValue  Format   Used
                 // -------------------- ----- ------ -------- -------- ------- ------
                 // SV_POSITION              0   xyzw        0      POS   float       
-                // POSITION                 0   xyz         1     NONE   float       
+                // POSITION                 0   xyz         1     NONE   float   xyz 
                 // NORMAL                   0   xyz         2     NONE   float   xyz 
                 // COLOR                    0   xyzw        3     NONE   float       
                 //
@@ -281,10 +281,11 @@ fxgroup
                 //
                 ps_5_0
                 dcl_globalFlags refactoringAllowed | skipOptimization
-                dcl_constantbuffer CB0[16], immediateIndexed
+                dcl_constantbuffer CB0[27], immediateIndexed
+                dcl_input_ps linear v1.xyz
                 dcl_input_ps linear v2.xyz
                 dcl_output o0.xyzw
-                dcl_temps 6
+                dcl_temps 18
                 //
                 // Initial variable locations:
                 //   v0.x <- input.PosH.x; v0.y <- input.PosH.y; v0.z <- input.PosH.z; v0.w <- input.PosH.w; 
@@ -298,57 +299,325 @@ fxgroup
                 rsq r0.x, r0.x
                 mul r0.xyz, r0.xxxx, v2.xyzx  // r0.x <- input.NormalW.x; r0.y <- input.NormalW.y; r0.z <- input.NormalW.z
                 
+                #line 208
+                mov r1.xyz, -v1.xyzx
+                add r1.xyz, r1.xyzx, cb0[8].xyzx
+                dp3 r0.w, r1.xyzx, r1.xyzx
+                rsq r0.w, r0.w
+                mul r1.xyz, r0.wwww, r1.xyzx  // r1.x <- toEyeW.x; r1.y <- toEyeW.y; r1.z <- toEyeW.z
+                
+                #line 211
+                mov r2.xyz, l(0,0,0,0)  // r2.x <- ambient.x; r2.y <- ambient.y; r2.z <- ambient.z
+                
                 #line 212
-                mov r1.xyz, l(0,0,0,0)  // r1.x <- diffuse.x; r1.y <- diffuse.y; r1.z <- diffuse.z
+                mov r3.xyz, l(0,0,0,0)  // r3.x <- diffuse.x; r3.y <- diffuse.y; r3.z <- diffuse.z
+                
+                #line 213
+                mov r4.xyz, l(0,0,0,0)  // r4.x <- spec.x; r4.y <- spec.y; r4.z <- spec.z
                 
                 #line 217
                 nop 
-                mov r2.xyz, cb0[10].xyzx
-                mov r3.xyz, cb0[13].xyzx
-                mov r4.xyz, cb0[15].xyzx
+                mov r5.xyz, cb0[9].xyzx
+                mov r6.xyz, cb0[10].xyzx
+                mov r7.xyzw, cb0[11].xyzw
+                mov r8.xyz, cb0[12].xyzx
+                mov r9.xyz, cb0[13].xyzx
+                mov r10.xyz, cb0[14].xyzx
+                mov r11.xyz, cb0[15].xyzx
                 mov r0.xyz, r0.xyzx
+                mov r1.xyz, r1.xyzx
                 
                 #line 93
-                mov r5.xyz, l(0,0,0,0)  // r5.x <- diffuse.x; r5.y <- diffuse.y; r5.z <- diffuse.z
+                mov r12.xyz, l(0,0,0,0)  // r12.x <- diffuse.x; r12.y <- diffuse.y; r12.z <- diffuse.z
+                
+                #line 94
+                mov r13.xyz, l(0,0,0,0)  // r13.x <- spec.x; r13.y <- spec.y; r13.z <- spec.z
                 
                 #line 96
-                mov r4.xyz, -r4.xyzx  // r4.x <- lightVec.x; r4.y <- lightVec.y; r4.z <- lightVec.z
+                mov r11.xyz, -r11.xyzx  // r11.x <- lightVec.x; r11.y <- lightVec.y; r11.z <- lightVec.z
+                
+                #line 98
+                mul r5.xyz, r5.xyzx, r8.xyzx  // r5.x <- ambient.x; r5.y <- ambient.y; r5.z <- ambient.z
                 
                 #line 100
-                dp3 r0.x, r4.xyzx, r0.xyzx  // r0.x <- diffuseFactor
+                dp3 r0.w, r11.xyzx, r0.xyzx  // r0.w <- diffuseFactor
                 
                 #line 103
-                lt r0.y, l(0.000000), r0.x
+                lt r1.w, l(0.000000), r0.w
+                
+                #line 105
+                mov r8.xyz, -r11.xyzx
+                dp3 r2.w, r8.xyzx, r0.xyzx
+                add r2.w, r2.w, r2.w
+                mov r2.w, -r2.w
+                mul r11.xyz, r0.xyzx, r2.wwww
+                add r8.xyz, r8.xyzx, r11.xyzx  // r8.x <- v.x; r8.y <- v.y; r8.z <- v.z
+                
+                #line 106
+                dp3 r2.w, r8.xyzx, r1.xyzx
+                max r2.w, r2.w, l(0.000000)
+                log r2.w, r2.w
+                mul r2.w, r2.w, r7.w
+                exp r2.w, r2.w  // r2.w <- specFactor
                 
                 #line 108
-                mul r0.xzw, r2.xxyz, r0.xxxx
-                mul r0.xzw, r3.xxyz, r0.xxzw  // r0.x <- diffuse.x; r0.z <- diffuse.y; r0.w <- diffuse.z
+                mul r6.xyz, r6.xyzx, r0.wwww
+                mul r6.xyz, r9.xyzx, r6.xyzx  // r6.x <- diffuse.x; r6.y <- diffuse.y; r6.z <- diffuse.z
+                
+                #line 109
+                mul r7.xyz, r7.xyzx, r2.wwww
+                mul r7.xyz, r10.xyzx, r7.xyzx  // r7.x <- spec.x; r7.y <- spec.y; r7.z <- spec.z
                 
                 #line 110
-                movc r0.xyz, r0.yyyy, r0.xzwx, r5.xyzx  // r0.y <- diffuse.y; r0.z <- diffuse.z
+                movc r6.xyz, r1.wwww, r6.xyzx, r12.xyzx
+                movc r7.xyz, r1.wwww, r7.xyzx, r13.xyzx
                 
                 #line 217
-                mov r0.xyz, r0.xyzx  // r0.x <- D.x; r0.y <- D.y; r0.z <- D.z
+                mov r5.xyz, r5.xyzx  // r5.x <- A.x; r5.y <- A.y; r5.z <- A.z
+                mov r6.xyz, r6.xyzx  // r6.x <- D.x; r6.y <- D.y; r6.z <- D.z
+                mov r7.xyz, r7.xyzx  // r7.x <- S.x; r7.y <- S.y; r7.z <- S.z
+                
+                #line 218
+                add r2.xyz, r2.xyzx, r5.xyzx
                 
                 #line 219
-                add r0.xyz, r0.xyzx, r1.xyzx  // r0.x <- diffuse.x; r0.y <- diffuse.y; r0.z <- diffuse.z
+                add r3.xyz, r3.xyzx, r6.xyzx
+                
+                #line 220
+                add r4.xyz, r4.xyzx, r7.xyzx
+                
+                #line 221
+                nop 
+                mov r5.xyz, cb0[9].xyzx
+                mov r6.xyz, cb0[10].xyzx
+                mov r7.xyzw, cb0[11].xyzw
+                mov r8.xyz, cb0[16].xyzx
+                mov r9.xyz, cb0[17].xyzx
+                mov r10.xyz, cb0[18].xyzx
+                mov r11.xyz, cb0[19].xyzx
+                mov r0.w, cb0[19].w
+                mov r12.xyz, cb0[20].xyzx
+                mov r13.xyz, v1.xyzx
+                mov r0.xyz, r0.xyzx
+                mov r1.xyz, r1.xyzx
+                
+                #line 115
+                mov r14.xyz, l(0,0,0,0)  // r14.x <- ambient.x; r14.y <- ambient.y; r14.z <- ambient.z
+                
+                #line 116
+                mov r15.xyz, l(0,0,0,0)  // r15.x <- diffuse.x; r15.y <- diffuse.y; r15.z <- diffuse.z
+                
+                #line 117
+                mov r16.xyz, l(0,0,0,0)  // r16.x <- spec.x; r16.y <- spec.y; r16.z <- spec.z
+                
+                #line 119
+                mov r13.xyz, -r13.xyzx
+                add r11.xyz, r11.xyzx, r13.xyzx  // r11.x <- lightVec.x; r11.y <- lightVec.y; r11.z <- lightVec.z
+                
+                #line 121
+                dp3 r1.w, r11.xyzx, r11.xyzx
+                sqrt r13.y, r1.w  // r13.y <- d
+                
+                #line 123
+                lt r0.w, r0.w, r13.y
+                
+                #line 126
+                if_z r0.w
+                  div r11.xyz, r11.xyzx, r13.yyyy
+                
+                #line 128
+                  mul r14.xyz, r5.xyzx, r8.xyzx
+                
+                #line 130
+                  dp3 r0.w, r11.xyzx, r0.xyzx  // r0.w <- diffuseFactor
+                
+                #line 134
+                  lt r1.w, l(0.000000), r0.w
+                
+                #line 136
+                  dp3 r2.w, r11.xyzx, r0.xyzx
+                  add r2.w, r2.w, r2.w
+                  mov r2.w, -r2.w
+                  mul r5.xyz, r0.xyzx, r2.wwww
+                  add r5.xyz, r11.xyzx, r5.xyzx  // r5.x <- v.x; r5.y <- v.y; r5.z <- v.z
+                
+                #line 137
+                  dp3 r2.w, r5.xyzx, r1.xyzx
+                  max r2.w, r2.w, l(0.000000)
+                  log r2.w, r2.w
+                  mul r2.w, r2.w, r7.w
+                  exp r2.w, r2.w  // r2.w <- specFactor
+                
+                #line 139
+                  mul r5.xyz, r6.xyzx, r0.wwww
+                  mul r5.xyz, r9.xyzx, r5.xyzx  // r5.x <- diffuse.x; r5.y <- diffuse.y; r5.z <- diffuse.z
+                
+                #line 140
+                  mul r6.xyz, r7.xyzx, r2.wwww
+                  mul r6.xyz, r10.xyzx, r6.xyzx  // r6.x <- spec.x; r6.y <- spec.y; r6.z <- spec.z
+                
+                #line 143
+                  mul r13.z, r13.y, r13.y
+                  mov r13.x, l(1.000000)
+                  dp3 r0.w, r12.xyzx, r13.xyzx
+                  div r0.w, l(1.000000), r0.w  // r0.w <- att
+                
+                #line 144
+                  mul r5.xyz, r0.wwww, r5.xyzx
+                
+                #line 145
+                  mul r6.xyz, r0.wwww, r6.xyzx
+                
+                #line 146
+                  movc r15.xyz, r1.wwww, r5.xyzx, r15.xyzx  // r15.x <- diffuse.x; r15.y <- diffuse.y; r15.z <- diffuse.z
+                  movc r16.xyz, r1.wwww, r6.xyzx, r16.xyzx  // r16.x <- spec.x; r16.y <- spec.y; r16.z <- spec.z
+                endif 
+                
+                #line 221
+                mov r14.xyz, r14.xyzx  // r14.x <- A.x; r14.y <- A.y; r14.z <- A.z
+                mov r15.xyz, r15.xyzx  // r15.x <- D.x; r15.y <- D.y; r15.z <- D.z
+                mov r16.xyz, r16.xyzx  // r16.x <- S.x; r16.y <- S.y; r16.z <- S.z
+                
+                #line 222
+                add r2.xyz, r2.xyzx, r14.xyzx
+                
+                #line 223
+                add r3.xyz, r3.xyzx, r15.xyzx
+                
+                #line 224
+                add r4.xyz, r4.xyzx, r16.xyzx
+                
+                #line 225
+                nop 
+                mov r5.xyz, cb0[9].xyzx
+                mov r6.xyz, cb0[10].xyzx
+                mov r7.xyz, cb0[11].xyzx
+                mov r8.xyz, cb0[21].xyzx
+                mov r9.xyz, cb0[22].xyzx
+                mov r10.xyz, cb0[23].xyzx
+                mov r11.xyz, cb0[24].xyzx
+                mov r12.xyz, cb0[25].xyzx
+                mov r13.xyz, cb0[26].xyzx
+                mov r0.w, cb0[23].w
+                mov r1.w, cb0[24].w
+                mov r2.w, cb0[26].w
+                mov r14.xyz, v1.xyzx
+                mov r0.xyz, r0.xyzx
+                mov r1.xyz, r1.xyzx
+                
+                #line 151
+                mov r15.xyz, l(0,0,0,0)  // r15.x <- ambient.x; r15.y <- ambient.y; r15.z <- ambient.z
+                
+                #line 152
+                mov r16.xyz, l(0,0,0,0)  // r16.x <- diffuse.x; r16.y <- diffuse.y; r16.z <- diffuse.z
+                
+                #line 153
+                mov r17.xyz, l(0,0,0,0)  // r17.x <- spec.x; r17.y <- spec.y; r17.z <- spec.z
+                
+                #line 155
+                mov r14.xyz, -r14.xyzx
+                add r11.xyz, r11.xyzx, r14.xyzx  // r11.x <- lightVec.x; r11.y <- lightVec.y; r11.z <- lightVec.z
+                
+                #line 157
+                dp3 r3.w, r11.xyzx, r11.xyzx
+                sqrt r14.y, r3.w  // r14.y <- d
+                
+                #line 159
+                lt r1.w, r1.w, r14.y
+                
+                #line 162
+                if_z r1.w
+                  div r11.xyz, r11.xyzx, r14.yyyy
+                
+                #line 164
+                  mul r5.xyz, r5.xyzx, r8.xyzx  // r5.x <- ambient.x; r5.y <- ambient.y; r5.z <- ambient.z
+                
+                #line 166
+                  dp3 r1.w, r11.xyzx, r0.xyzx  // r1.w <- diffuseFactor
+                
+                #line 169
+                  lt r3.w, l(0.000000), r1.w
+                
+                #line 171
+                  dp3 r4.w, r11.xyzx, r0.xyzx
+                  add r4.w, r4.w, r4.w
+                  mov r4.w, -r4.w
+                  mul r0.xyz, r0.xyzx, r4.wwww
+                  add r0.xyz, r11.xyzx, r0.xyzx  // r0.x <- v.x; r0.y <- v.y; r0.z <- v.z
+                
+                #line 172
+                  dp3 r0.x, r0.xyzx, r1.xyzx
+                  max r0.x, r0.x, l(0.000000)
+                  log r0.x, r0.x
+                  mul r0.x, r0.x, r0.w
+                  exp r0.x, r0.x  // r0.x <- specFactor
+                
+                #line 174
+                  mul r0.xyz, r7.xyzx, r0.xxxx
+                  mul r0.xyz, r10.xyzx, r0.xyzx  // r0.x <- spec.x; r0.y <- spec.y; r0.z <- spec.z
+                
+                #line 175
+                  mul r1.xyz, r6.xyzx, r1.wwww
+                  mul r1.xyz, r9.xyzx, r1.xyzx  // r1.x <- diffuse.x; r1.y <- diffuse.y; r1.z <- diffuse.z
+                
+                #line 176
+                  movc r1.xyz, r3.wwww, r1.xyzx, r16.xyzx
+                  movc r0.xyz, r3.wwww, r0.xyzx, r17.xyzx
+                
+                #line 178
+                  mov r6.xyz, -r11.xyzx
+                  dp3 r0.w, r6.xyzx, r13.xyzx
+                  max r0.w, r0.w, l(0.000000)
+                  log r0.w, r0.w
+                  mul r0.w, r0.w, r2.w
+                  exp r0.w, r0.w  // r0.w <- spot
+                
+                #line 179
+                  mul r14.z, r14.y, r14.y
+                  mov r14.x, l(1.000000)
+                  dp3 r1.w, r12.xyzx, r14.xyzx
+                  div r1.w, r0.w, r1.w  // r1.w <- att
+                
+                #line 181
+                  mul r15.xyz, r0.wwww, r5.xyzx  // r15.x <- ambient.x; r15.y <- ambient.y; r15.z <- ambient.z
+                
+                #line 182
+                  mul r17.xyz, r0.xyzx, r1.wwww  // r17.x <- spec.x; r17.y <- spec.y; r17.z <- spec.z
+                
+                #line 183
+                  mul r16.xyz, r1.wwww, r1.xyzx  // r16.x <- diffuse.x; r16.y <- diffuse.y; r16.z <- diffuse.z
+                endif 
+                
+                #line 225
+                mov r15.xyz, r15.xyzx  // r15.x <- A.x; r15.y <- A.y; r15.z <- A.z
+                mov r16.xyz, r16.xyzx  // r16.x <- D.x; r16.y <- D.y; r16.z <- D.z
+                mov r17.xyz, r17.xyzx  // r17.x <- S.x; r17.y <- S.y; r17.z <- S.z
+                
+                #line 226
+                add r0.xyz, r2.xyzx, r15.xyzx  // r0.x <- ambient.x; r0.y <- ambient.y; r0.z <- ambient.z
+                
+                #line 227
+                add r1.xyz, r3.xyzx, r16.xyzx  // r1.x <- diffuse.x; r1.y <- diffuse.y; r1.z <- diffuse.z
+                
+                #line 228
+                add r2.xyz, r4.xyzx, r17.xyzx  // r2.x <- spec.x; r2.y <- spec.y; r2.z <- spec.z
                 
                 #line 230
-                dp3 r0.w, r0.xyzx, r0.xyzx
+                dp3 r0.w, r1.xyzx, r1.xyzx
                 sqrt r0.w, r0.w  // r0.w <- diffuseFactor
                 
                 #line 231
-                lt r1.x, l(0.000000), r0.w
-                if_nz r1.x
+                lt r1.w, l(0.000000), r0.w
+                if_nz r1.w
                 
                 #line 233
-                  div r1.xyz, r0.xyzx, r0.wwww  // r1.x <- diffuse.x; r1.y <- diffuse.y; r1.z <- diffuse.z
+                  div r3.xyz, r1.xyzx, r0.wwww  // r3.x <- diffuse.x; r3.y <- diffuse.y; r3.z <- diffuse.z
                 
                 #line 235
-                  mov r1.w, l(0.500000)  // r1.w <- divider
+                  mov r1.w, l(0.333333)  // r1.w <- divider
                 
                 #line 236
-                  mul r0.w, r0.w, l(4.000000)
+                  mul r0.w, r0.w, l(9.000000)
                 
                 #line 238
                   mul r0.w, r1.w, r0.w
@@ -356,13 +625,14 @@ fxgroup
                   mul r0.w, r1.w, r0.w  // r0.w <- diffuseFactor
                 
                 #line 239
-                  mul r0.xyz, r0.wwww, r1.xyzx  // r0.x <- diffuse.x; r0.y <- diffuse.y; r0.z <- diffuse.z
+                  mul r1.xyz, r0.wwww, r3.xyzx  // r1.x <- diffuse.x; r1.y <- diffuse.y; r1.z <- diffuse.z
                 
                 #line 240
                 endif 
                 
                 #line 242
-                mov r0.xyz, r0.xyzx  // r0.x <- litColor.x; r0.y <- litColor.y; r0.z <- litColor.z
+                add r0.xyz, r0.xyzx, r1.xyzx
+                add r0.xyz, r2.xyzx, r0.xyzx  // r0.x <- litColor.x; r0.y <- litColor.y; r0.z <- litColor.z
                 
                 #line 244
                 mov r0.w, cb0[10].w  // r0.w <- litColor.w
@@ -371,7 +641,7 @@ fxgroup
                 mov o0.xyz, r0.xyzx
                 mov o0.w, r0.w
                 ret 
-                // Approximately 35 instruction slots used
+                // Approximately 188 instruction slots used
                             
             };
             RasterizerState = SolidRS;

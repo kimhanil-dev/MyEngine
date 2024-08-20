@@ -2,6 +2,8 @@
 
 #include "Object.h"
 
+class IGeometryModifier;
+
 class PointLightObject : public Object
 {
 public:
